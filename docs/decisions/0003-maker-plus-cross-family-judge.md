@@ -1,6 +1,9 @@
 # ADR-0003: Model topology — local maker + cross-family judge
 
-**Status:** Accepted (with a flagged evidence gap)
+**Status:** Accepted (with a flagged evidence gap; scoped by [ADR-0016](0016-verification-corrections.md):
+maker locality is **deferred** in v0.x — ADR-0009 pins Claude as the maker; the judge's
+independence seam stands. Judge FAIL semantics scoped: iteration-level FAIL hard-blocks;
+Verify-level FAIL parks to STOP #2 with reject as the recommended default.)
 
 **Context:** The first run used one cloud model as both maker and checker — same-family
 self-review, no cost separation, no independence. The literature says same-model self-checking

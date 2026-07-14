@@ -1,6 +1,11 @@
 # ADR-0013: Loop modes — attended / attended --step / autonomous
 
-**Status:** Accepted
+**Status:** Accepted (amended by [ADR-0016](0016-verification-corrections.md): headless
+`claude -p` has **no interactive permission prompts** — `attended` is corrected to
+live streamed output + base allowlist + `--permission-mode acceptEdits`, with
+un-allowlisted actions aborting the iteration (recorded as a failed iteration; the human
+allowlists and resumes). A `--permission-prompt-tool` MCP adjudicator is the documented
+v0.2 path to true mid-iteration prompting.)
 
 **Context:** ADR-0007 named the two loop modes `supervised` and `autonomous`. Reviewing the
 flowchart, the operator read "supervised" as "needs my input per iteration" — which the mode

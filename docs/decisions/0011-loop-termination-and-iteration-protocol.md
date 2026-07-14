@@ -1,6 +1,10 @@
 # ADR-0011: Loop termination model & iteration protocol placement
 
-**Status:** Accepted
+**Status:** Accepted (amended by [ADR-0016](0016-verification-corrections.md): config key
+renamed `retry_cap` → `max_attempts_per_task`; one-task-per-iteration upgraded to
+hook-enforced via the GREEN close; the engine's `max_iterations` is a static cap — budget
+enforcement lives in the shell-evaluated loop condition; accepting with parked items at
+STOP #2 routes through reconcile-contract)
 
 **Context:** HANDOFF Q5: where do auto-commit and one-task-per-iteration live? And (surfaced
 while simulating multi-task runs) how is the loop's budget determined? The research is

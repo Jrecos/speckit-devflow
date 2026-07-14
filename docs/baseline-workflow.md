@@ -1,5 +1,14 @@
 # The baseline workflow (what DevFlow automates)
 
+> **Amendment (2026-07-13):** the DevFlow bundle design supersedes parts of this document:
+> setup step 2's extension list and steps 8/11's `loop.*` commands (the loop engine is now
+> DevFlow-owned — [ADR-0006](decisions/0006-component-strategy-hybrid.md),
+> [ADR-0007](decisions/0007-own-loop-engine-with-modes.md)), and the "Engine swap" section
+> (`ralph` is superseded by the loop's `autonomous` mode — its own completion gate never
+> replaces Verify; modes are `attended` / `attended --step` / `autonomous`,
+> [ADR-0013](decisions/0013-loop-modes-attended-step-autonomous.md)). This document remains
+> the record of the *manual* baseline that DevFlow automates.
+
 This is the spec-driven development workflow we designed and ran by hand — a **16-step,
 6-phase** loop with a parallel knowledge track. The DevFlow bundle exists to **provision and
 automate this**, with the five structural fixes from [`retro.md`](retro.md) baked in.

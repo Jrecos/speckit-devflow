@@ -1,6 +1,10 @@
 # ADR-0010: record-decision & reconcile-contract — commands + hook + branch, not step types
 
-**Status:** Accepted
+**Status:** Accepted (amended by [ADR-0016](0016-verification-corrections.md): the Stop-gate
+blocks *end-of-turn* (bounded by Claude's consecutive-block cap — engine backstop added);
+it is scoped to iterate sessions via `in_iteration`; a RED-exit contract lets failed
+iterations close with a failure note instead of a decision record; the GREEN close also
+verifies exactly one task changed state)
 
 **Context:** HANDOFF Q3 assumed the two gap-fixes would be bundle **steps**. Verified against
 spec-kit 0.12.11: a bundle step is a Python **step type** (`StepBase` subclass in

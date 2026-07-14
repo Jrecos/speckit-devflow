@@ -1,6 +1,9 @@
 # ADR-0012: Review findings loop back into Build — every hop documented
 
-**Status:** Accepted
+**Status:** Accepted (amended by [ADR-0016](0016-verification-corrections.md): the loopback
+is **statically unrolled** in the workflow YAML — spec-kit workflows have no backward
+edges; `review_cycles: 2` documents the unroll; findings get a machine-readable
+`findings.json` sidecar; accept-with-parked-items also routes through reconcile-contract)
 
 **Context:** When the Review phase (/code-review + Semgrep + /security-review) finds
 problems, someone must fix them. Candidates: (A) findings auto-convert to fix-tasks and

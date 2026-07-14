@@ -22,14 +22,20 @@ where every line is ✓ can run `specify workflow run devflow` immediately.
    scripts parse quoted values only; an unquoted value reads as empty.
    These power the hooks — with empty values the PostToolUse critic is inert and
    the Stop gate blocks every GREEN close.
-4. **Judge seam:** check `DEVFLOW_JUDGE_CMD` is set in the environment. If set,
-   smoke-test it: create trivial diff/criteria/slice temp files and run
-   `bash .specify/extensions/devflow/scripts/bash/devflow-judge.sh <d> <c> <s>` —
-   a schema-valid verdict must come back. Ask the human what model family stands
-   behind it; **warn clearly if it is the same family as the maker (Claude)** —
-   same-family self-checking is the documented weak layer (ADR-0003).
-   If unset: print setup instructions and mark the checklist line ✗ (the loop
-   refuses to run without a judge — `judge.required: true`).
+4. **Judge seam:** check whether `DEVFLOW_JUDGE_CMD` is set.
+   - **Set:** smoke-test it — create trivial diff/criteria/slice temp files, run
+     `bash .specify/extensions/devflow/scripts/bash/devflow-judge.sh <d> <c> <s>`,
+     require a schema-valid verdict. Ask the human what model family stands behind
+     it; **warn clearly if it is the same family as the maker (Claude)** —
+     same-family self-checking is the documented weak layer (ADR-0003).
+     Checklist: `judge ✓ (cross-family)` or `judge ⚠ (same-family by choice)`.
+   - **Unset:** the seam falls back to **Claude as judge** (ADR-0018) — still an
+     independent fresh context, but same-family. Smoke-test the fallback the same
+     way; tell the human plainly: *"No DEVFLOW_JUDGE_CMD set — running with the
+     same-family Claude fallback. Recommended upgrade: one env var pointing at any
+     cross-family model."* Checklist: `judge ⚠ fallback (same-family)`.
+   A verdict per iteration remains required either way; only if neither the env
+   var nor a `claude` CLI resolves does the line become ✗ (loop cannot run).
 5. **Hooks pack:** run
    `python3 .specify/extensions/devflow/scripts/python/merge_settings.py .claude/settings.json .specify/extensions/devflow/assets/claude/settings-hooks.json`
    (idempotent — safe to re-run).

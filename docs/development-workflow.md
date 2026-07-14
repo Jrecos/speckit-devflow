@@ -41,7 +41,9 @@ export DEVFLOW_JUDGE_CMD='<any command: reads {"diff","criteria","spec_slice"} J
 ```
 
 Role in the repo, resolution in your environment ([ADR-0014](decisions/0014-judge-wiring-role-env-seam.md)).
-No judge → the loop refuses to run. Malformed verdict → fail-safe block.
+**Optional but recommended:** unset → Claude judges Claude — an independent fresh context,
+but same-family, warning on every run ([ADR-0018](decisions/0018-judge-fallback-same-family.md)).
+Malformed verdict or no resolvable judge at all → fail-safe block.
 
 ## Stage 2 — per feature: one command, two decisions
 

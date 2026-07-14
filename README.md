@@ -97,7 +97,9 @@ claude                                  # then, inside your project:
 /speckit-devflow-onboard                # validates tools, adds semgrep MCP, installs hooks pack,
                                         # checker subagent, CLAUDE.md protocol; smoke-tests the judge
 
-export DEVFLOW_JUDGE_CMD='<your cross-family judge command>'   # role → your env, never committed
+export DEVFLOW_JUDGE_CMD='<your cross-family judge command>'   # optional but recommended —
+                                        # unset = Claude judges Claude (same-family fallback,
+                                        # warns every run; ADR-0018)
 
 specify workflow run devflow \
   --input feature="describe the feature" \
@@ -128,10 +130,13 @@ never the guarantees. (The word "supervised" is retired; it promised input it ne
 ### The judge seam ([ADR-0014](docs/decisions/0014-judge-wiring-role-env-seam.md))
 
 Any command that reads `{"diff","criteria","spec_slice"}` on stdin and prints
-`{"verdict":"PASS"|"FAIL","reason":"...","criteria":[...]}` can judge. Missing judge or
-malformed verdict **fails safe** (blocks). Onboard warns if your judge is the same model
-family as the maker — same-family self-checking is the documented weak layer
-([ADR-0003](docs/decisions/0003-maker-plus-cross-family-judge.md)).
+`{"verdict":"PASS"|"FAIL","reason":"...","criteria":[...]}` can judge. **Unset?** DevFlow
+falls back to Claude as the judge — an independent fresh context, but same-family, so it
+warns on every run ([ADR-0018](docs/decisions/0018-judge-fallback-same-family.md)).
+Cross-family is one env var away and remains the recommended topology: same-family
+self-checking is the documented weak layer
+([ADR-0003](docs/decisions/0003-maker-plus-cross-family-judge.md)). A malformed or
+unreachable judge still **fails safe** (blocks the iteration).
 
 ## A session, end to end
 

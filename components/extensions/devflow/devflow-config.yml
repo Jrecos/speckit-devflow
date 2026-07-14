@@ -13,7 +13,9 @@ commands:
   test_full: ""                # e.g. "npm test"
 judge:
   role: cross-family-judge     # resolved by $DEVFLOW_JUDGE_CMD in your environment (never committed)
-  required: true
+  required: true               # a verdict is required per iteration; when DEVFLOW_JUDGE_CMD is
+                               # unset the role falls back to Claude — same-family, warns loudly
+                               # (ADR-0018). Cross-family remains the recommended topology.
   votes: 1
 checker:
   role: independent-checker

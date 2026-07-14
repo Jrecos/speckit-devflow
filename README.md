@@ -129,6 +129,64 @@ malformed verdict **fails safe** (blocks). Onboard warns if your judge is the sa
 family as the maker — same-family self-checking is the documented weak layer
 ([ADR-0003](docs/decisions/0003-maker-plus-cross-family-judge.md)).
 
+## A session, end to end
+
+What a real feature looks like — 10 tasks, one afternoon, two decisions:
+
+```console
+$ specify workflow run devflow --input feature="rate-limited login with audit log" --input mode=attended
+
+▸ specify      spec.md written (the contract)
+▸ brainstorm   superspec pressure-tests edge cases → spec revised
+▸ clarify      2 questions answered
+▸ plan         plan.md + 10 failing acceptance tests (red — the loop's target)
+▸ tasks        tasks.md: 10 tasks, each with AC lines
+▸ init/leash   budget = ⌈10 × 2.5⌉ = 25 iterations · 4h box · park after 2 attempts
+▸ analyze      spec ↔ plan ↔ tasks consistent
+
+  ┌─ Gate ─────────────────────────────────────
+  │ STOP #1 - review the plan, the failing acceptance
+  │ tests, and the leash below. ...
+  │ [1] approve   [2] reject
+  └─────────────────────────────────────────────
+  Choose [1-2]: 1                     ← decision #1. You can walk away now.
+
+▸ build-loop   iter 1: T1 ✓ green close (record + auto-commit)
+               iter 2: T2 ✓ · iter 3: T3 ✓ ...
+               iter 5: T5 judge FAIL "error paths leak state" → verdict to state
+               iter 6: T5 retry reads verdict → targeted fix ✓
+               iter 9-10: T8 red ×2 (flaky test) → PARKED, loop moves on
+               iter 12: T10 ✓ → open tasks: 0 → loop exits
+▸ review       findings.md + findings.json: F1 SQL injection (Semgrep, high)
+▸ fix-cycle-1  F1 → fix-task → mini-loop (budget 3) → fixed, record links F1
+▸ re-review    full gate again → clean (cycle 1/2)
+▸ verify       prerequisite ✓ · full suite green · whole-diff judge: PASS
+               1 deviation noted: sliding refresh window (spec said fixed)
+
+  ┌─ Gate ─────────────────────────────────────
+  │ STOP #2 - the evidence is below. ...        (stop2.md: 9 done · T8 parked ·
+  │ [1] accept                                   12+2 iters · review clean ·
+  │ [2] accept-with-deviation                    1 deviation · 11 records)
+  │ [3] reject
+  └─────────────────────────────────────────────
+  Choose [1-3]: 2                     ← decision #2
+
+▸ reconcile    spec.md §refresh updated + ADR written (T8 descope documented too)
+▸ ship         git.validate ✓ → PR opened, links the whole trail
+▸ capture      3 vault-note candidates proposed from 12 decision records
+```
+
+Useful moves mid-run:
+
+| You want to… | Do |
+|---|---|
+| see where the loop is | `claude` → `/speckit-devflow-status` (iteration, budget, clock, parked, verdicts) |
+| pause the run | `Ctrl+C` — everything durable is already on disk and committed |
+| resume (or answer a gate that paused headless) | `specify workflow resume <run-id>` in a TTY (`specify workflow status` lists runs) |
+| step iteration-by-iteration | run with `--input mode=attended-step` — a gate blocks at every boundary |
+| inspect the loop's raw state | `specs/<feature>/loop/state.json` · findings: `specs/<feature>/review/findings.json` |
+| triage a parked task | nothing until STOP #2 — it arrives there with its full attempt history |
+
 ### Bundle authors (this repo)
 
 ```bash

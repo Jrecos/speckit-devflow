@@ -1,0 +1,60 @@
+schema_version: "1.0"
+
+extension:
+  id: devflow
+  name: "DevFlow Loop Engine"
+  version: "0.1.0"
+  description: "Autonomous spec-driven build loop: one task per fresh-context iteration, maker/checker/judge verification, close-contract Stop gate with auto-commit, and pipeline commands for review, verify, reconcile, and capture"
+  category: "process"
+  effect: "read-write"
+  author: "Jrecos"
+  repository: "https://github.com/Jrecos/speckit-devflow"
+  license: MIT
+
+requires:
+  speckit_version: ">=0.12.0"
+  tools:
+    - name: git
+      required: true
+    - name: claude
+      required: true
+
+provides:
+  commands:
+    - name: speckit.devflow.onboard
+      file: commands/speckit.devflow.onboard.md
+      description: "Validate and install every DevFlow prerequisite at project scope: commands config, semgrep MCP, judge seam, hooks pack, checker subagent, CLAUDE.md protocol"
+    - name: speckit.devflow.iterate
+      file: commands/speckit.devflow.iterate.md
+      description: "Run exactly one build-loop iteration: pick one task, implement, test, checker + judge verdicts, close GREEN or RED under the Stop-gate contract"
+    - name: speckit.devflow.review
+      file: commands/speckit.devflow.review.md
+      description: "Review phase: local code review + Semgrep + security review; write findings.md and machine-readable findings.json FIRST"
+    - name: speckit.devflow.verify
+      file: commands/speckit.devflow.verify.md
+      description: "Verify phase: full test suite + judge verdict over the whole diff; write verify-report.md"
+    - name: speckit.devflow.record-decision
+      file: commands/speckit.devflow.record-decision.md
+      description: "Write an ADR-lite decision record for the current iteration (links its finding when resolving one)"
+    - name: speckit.devflow.reconcile-contract
+      file: commands/speckit.devflow.reconcile-contract.md
+      description: "Accepted deviation or descoped/parked items: edit the spec contract text and write an ADR before Ship"
+    - name: speckit.devflow.capture
+      file: commands/speckit.devflow.capture.md
+      description: "Capture phase: scan committed decision records and propose durable knowledge notes for human curation"
+    - name: speckit.devflow.status
+      file: commands/speckit.devflow.status.md
+      description: "Render a compact, budget-aware view of loop state with one recommended next action"
+
+  config:
+    - name: "devflow-config.yml"
+      template: "config-template.yml"
+      description: "Loop brakes, project commands (lint/typecheck/tests), judge/checker roles"
+      required: false
+
+tags:
+  - "loop"
+  - "automation"
+  - "verification"
+  - "maker-checker"
+  - "workflow"

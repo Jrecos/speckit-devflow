@@ -169,7 +169,7 @@ components/
                                   switch routing, clean-park semantics
 tests/acceptance/                 12 automated tests + MANUAL.md (live-Claude checklist)
 docs/
-  decisions/                      ADRs 0001–0016 — every design decision, including the
+  decisions/                      ADRs 0001–0017 — every design decision, including the
                                   three-agent verification pass that corrected the design
   superpowers/specs/              the approved design spec
   research/                       the cited loop-architecture research this is built on

@@ -43,5 +43,14 @@ where every line is ✓ can run `specify workflow run devflow` immediately.
    does not pass `--bare` (which would disable hooks, skills, and CLAUDE.md):
    check `SPECKIT_INTEGRATION_CLAUDE_EXTRA_ARGS` and any project config for it.
 9. **Script permissions:** `chmod +x .specify/extensions/devflow/scripts/bash/*.sh`
-10. **Report** the checklist: tools ✓/✗ · semgrep ✓/✗ · commands ✓/✗ · judge ✓/✗
-    (+family warning if any) · hooks ✓/✗ · checker ✓/✗ · CLAUDE.md ✓/✗ · dispatch ✓/✗.
+10. **Gitignore hygiene (ADR-0017):** ensure `.gitignore` contains these entries
+    (append any that are missing; never remove existing lines):
+    - `CLAUDE.local.md` and `.claude/settings.local.json` (the official local-pair
+      convention — personal config stays out of the shared repo)
+    - `.env` and `.env.*` (where `DEVFLOW_JUDGE_CMD` and other secrets live)
+    Do NOT gitignore `loop/state.json` or `review/findings.json` — they are the
+    loop's on-disk coordination contract and audit trail, committed on feature
+    branches by design (squash-merge keeps them out of main's linear history).
+11. **Report** the checklist: tools ✓/✗ · semgrep ✓/✗ · commands ✓/✗ · judge ✓/✗
+    (+family warning if any) · hooks ✓/✗ · checker ✓/✗ · CLAUDE.md ✓/✗ ·
+    dispatch ✓/✗ · gitignore ✓/✗.

@@ -84,6 +84,9 @@ docs/
 - [x] Project scaffold + findings captured
 - [x] Baseline workflow + rationale captured (`docs/baseline-workflow.md`, ADR-0005)
 - [x] Cold-start handoff doc (`HANDOFF.md`)
-- [ ] **Brainstorm the bundle design** (component list, workflow/step/preset breakdown, judge wiring) — next
-- [ ] Author the components (workflow, steps, preset) + finalize `bundle.yml`
-- [ ] `specify bundle validate` → `build` → dry-run install
+- [x] Brainstorm the bundle design — ADRs 0006–0016 + approved spec
+  (`docs/superpowers/specs/2026-07-13-devflow-bundle-design.md`)
+- [x] Author the components (`components/`: devflow extension + workflow + preset) + final `bundle.yml`
+- [x] `specify bundle validate` → `build` green; 12 automated acceptance tests pass
+  (`tests/acceptance/run-all.sh`)
+- [ ] **Next:** live-Claude dogfood run (`tests/acceptance/MANUAL.md`) → catalog publication

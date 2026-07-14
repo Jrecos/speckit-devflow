@@ -1,0 +1,20 @@
+# DevFlow configuration — copied to .specify/extensions/devflow/devflow-config.yml on install.
+# Onboard (/speckit-devflow-onboard) detects and fills the commands section; hooks are inert until it does.
+loop:
+  iteration_factor: 2.5        # budget = ceil(open_tasks * factor); shown at STOP #1
+  max_attempts_per_task: 2     # attempts before a task is parked
+  time_box_hours: 4
+review:
+  cycles: 2                    # unroll depth of the workflow's review loopback (informational)
+commands:
+  lint: ""                     # e.g. "npm run lint" — required for the PostToolUse hook
+  typecheck: ""                # e.g. "npx tsc --noEmit"
+  test_scoped: ""              # e.g. "npm test -- --changed" — required for the Stop gate
+  test_full: ""                # e.g. "npm test"
+judge:
+  role: cross-family-judge     # resolved by $DEVFLOW_JUDGE_CMD in your environment (never committed)
+  required: true
+  votes: 1
+checker:
+  role: independent-checker
+  independent: true

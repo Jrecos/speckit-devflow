@@ -130,3 +130,19 @@ until the planned components exist — expected.
 > finalize `bundle.yml` until the design is approved. Spec Kit is the core; the repo is public —
 > no personal/client/infra references. First, confirm you've read the docs and restate the open
 > questions in priority order before we start question 1.
+
+---
+
+## Postscript (2026-07-14) — design + authoring complete
+
+The brainstorm ran (visual companion session), all seven open questions resolved as
+ADRs 0006–0015, a three-agent verification pass corrected the design (ADR-0016), and
+the components are authored and green:
+
+- `components/` — devflow extension (8 commands, hook scripts, checker subagent,
+  CLAUDE.md protocol, config), devflow workflow (unrolled loopback), plan-hardening preset
+- `bundle/bundle.yml` — final, verified schema; `specify bundle validate` + `build` pass
+- `tests/acceptance/` — 12 automated tests green (`run-all.sh`)
+
+Open work: the live-Claude dogfood checklist (`tests/acceptance/MANUAL.md`), then
+catalog publication.

@@ -110,6 +110,10 @@ Then you make exactly two decisions:
 2. **STOP #2** — read the evidence (tasks, verdicts, findings, deviations, records).
    `accept` / `accept-with-deviation` / `reject`.
 
+**The complete lifecycle** — machine setup, constitution, the optional product layer,
+every phase with its artifacts, mid-run operations, and the baseline→DevFlow mapping —
+lives in [`docs/development-workflow.md`](docs/development-workflow.md).
+
 ### Modes ([ADR-0013](docs/decisions/0013-loop-modes-attended-step-autonomous.md))
 
 | Mode | You are… | The loop waits for you? |

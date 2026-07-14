@@ -1,4 +1,6 @@
-<!-- Header image: docs/assets/devflow-header.png (see "Contributing a header" note at the bottom) -->
+<p align="center">
+  <img src="docs/assets/devflow-header.png" alt="DevFlow — two human gates, one autonomous loop between them" width="100%">
+</p>
 
 # DevFlow — a Spec Kit bundle for autonomous, spec-driven development
 
@@ -196,8 +198,3 @@ the spec and found what tests couldn't; all findings fixed.
 
 MIT — see [`bundle/bundle.yml`](bundle/bundle.yml).
 
----
-
-*Header image wanted: `docs/assets/devflow-header.png` (~1280×400). Concept: a pipeline of
-glowing gates with exactly two human silhouettes at STOP #1 and STOP #2, and a tight loop
-spinning between them — dark background, spec-kit-adjacent palette.*

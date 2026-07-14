@@ -65,21 +65,25 @@ specify bundle build    --path ./bundle --output dist/   # versioned .zip artifa
 ## Structure
 
 ```
+HANDOFF.md          # cold-start doc — open a fresh session with this to build the bundle
 bundle/
   bundle.yml        # the manifest (draft — components below are planned, not yet authored)
   README.md         # how to validate / build / install
 docs/
+  baseline-workflow.md   # the 16-step workflow this bundle automates
   blueprint.md      # the pipeline + gate model + verification stack
   retro.md          # the 5 gaps from the first real run
   research/
     loop-architecture-research.md   # the cited deep-research report (design input)
-  decisions/        # ADRs (dogfooding the knowledge track — record decisions as we make them)
+  decisions/        # ADRs 0001–0005 (dogfooding the knowledge track)
 ```
 
 ## Status
 
 - [x] Research (loop architectures + harness design) — done, cited
 - [x] Project scaffold + findings captured
+- [x] Baseline workflow + rationale captured (`docs/baseline-workflow.md`, ADR-0005)
+- [x] Cold-start handoff doc (`HANDOFF.md`)
 - [ ] **Brainstorm the bundle design** (component list, workflow/step/preset breakdown, judge wiring) — next
 - [ ] Author the components (workflow, steps, preset) + finalize `bundle.yml`
 - [ ] `specify bundle validate` → `build` → dry-run install

@@ -1,0 +1,58 @@
+# DevFlow — Spec Kit bundle manifest
+#
+# DRAFT / TARGET manifest. The components under `provides` are PLANNED, not yet authored,
+# so `specify bundle validate` will fail reference resolution until they exist. This file
+# encodes intent; it is finalized after the design brainstorm and component authoring.
+#
+# Schema mirrors spec-kit's own examples/bundles/developer/bundle.yml (schema_version 1.0).
+
+schema_version: "1.0"
+
+id: devflow
+version: 0.1.0
+name: DevFlow
+description: >-
+  Autonomous, spec-driven development workflow — a phased outer pipeline with two human
+  STOPs, an inner build loop, layered verification (mechanical → tests → cross-family judge
+  → human), and a knowledge track. Baked-in fixes for the five gaps found on first real use.
+license: MIT
+author: TBD
+# `integration` intentionally omitted → agnostic: inherits the project's agent integration.
+
+requires:
+  speckit: ">=0.9.0"
+  tools: []
+  mcp:
+    # Security/static-analysis gate for the Review phase (fixes gap B). Confirm mcp entry
+    # shape against spec-kit's schema during authoring.
+    - semgrep
+
+provides:
+  # NOTE: every entry below is a design target pending the brainstorm. Versions are
+  # placeholders. Which of {loop, superspec, aide, git, ralph} the bundle pins is an
+  # open design decision (loop is required; ralph is the alternate engine).
+  extensions:
+    - name: loop            # required maker/checker build-loop engine
+      version: "*"
+    # - name: superspec     # spec hardening (brainstorm/review against spec)
+    # - name: git           # git-validate / git-commit helpers (Ship phase)
+    # - name: aide          # optional product layer (vision/roadmap/items)
+
+  presets:
+    # e.g. a gate-policy / constitution preset that enforces the two human STOPs and the
+    # Review-artifact prerequisite. Strategy + priority per spec-kit preset schema.
+    []
+
+  steps:
+    - record-decision       # per-iteration decision → docs/decisions/*.md (fixes gap C)
+    - reconcile-contract    # accepted deviation → spec edit + ADR (fixes gap D)
+
+  workflows:
+    - devflow               # the phased pipeline w/ 2 human STOPs + inner build loop (fixes A/B)
+
+tags:
+  - development
+  - autonomous
+  - spec-driven
+  - verification
+  - knowledge-base

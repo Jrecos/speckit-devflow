@@ -1,0 +1,16 @@
+# Build artifacts
+dist/
+*.zip
+
+# Secrets — never commit
+.env
+.env.*
+*.key
+*.pem
+secrets/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

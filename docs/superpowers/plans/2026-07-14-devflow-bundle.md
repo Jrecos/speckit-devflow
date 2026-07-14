@@ -35,7 +35,9 @@
 ```
 
 - **`findings.json` schema:** `{"status":"clean|findings|parked","open":[{"id","severity","file","summary"}],"cycle":0}`
-- **Canonical paths:** state `specs/<feature>/loop/state.json` (feature dir from spec-kit-native `.specify/feature.json`); fixed-path gate displays `.specify/devflow/leash.md`, `.specify/devflow/stop2.md`; config `.specify/extensions/devflow/devflow-config.yml`; scripts `.specify/extensions/devflow/scripts/bash/*.sh`.
+- **Canonical paths:** state `specs/<feature>/loop/state.json`; the feature dir comes from spec-kit-native `.specify/feature.json` whose key is **`feature_directory`** (verified — never `dir`); fixed-path gate displays `.specify/devflow/leash.md`, `.specify/devflow/stop2.md`; config `.specify/extensions/devflow/devflow-config.yml`; scripts `.specify/extensions/devflow/scripts/bash/*.sh`.
+- **Config parsing:** all reads of `devflow-config.yml` quoted values use regex `"([^"]*)"` **unanchored** (values carry trailing `# comments`; a `$`-anchored pattern never matches).
+- **pyyaml:** ensure once before Task 2: `python3 -m pip install --user pyyaml` (used by yaml-validity checks and test-11).
 - Commit after every task (conventional messages, `feat:`/`test:`/`docs:`).
 
 ## File Structure
@@ -136,7 +138,9 @@ make_scratch_project() {
     git init -q -b main
     git config user.email "test@example.com"; git config user.name "DevFlow Test"
     mkdir -p .specify/devflow .claude specs/012-demo/loop specs/012-demo/review docs/decisions
-    printf '{"feature": "012-demo", "dir": "specs/012-demo"}\n' > .specify/feature.json
+    # NOTE: real spec-kit writes key "feature_directory" (verified: core_pack/commands/specify.md,
+    # common.sh read_feature_json_feature_directory) — never "dir".
+    printf '{"feature_directory": "specs/012-demo"}\n' > .specify/feature.json
     cat > specs/012-demo/spec.md <<'EOF'
 # Spec: demo feature
 ## Refresh
@@ -386,7 +390,8 @@ tags:
 
 Run:
 ```bash
-python3 -c "import yaml,sys; yaml.safe_load(open('components/extensions/devflow/extension.yml')); yaml.safe_load(open('components/extensions/devflow/config-template.yml')); print('yaml ok')" 2>/dev/null || python3 -c "print('pyyaml missing — use ruby or npx js-yaml')" 
+python3 -c "import yaml" 2>/dev/null || python3 -m pip install --user pyyaml
+python3 -c "import yaml,sys; yaml.safe_load(open('components/extensions/devflow/extension.yml')); yaml.safe_load(open('components/extensions/devflow/config-template.yml')); print('yaml ok')"
 tmp=$(mktemp); echo '{"budget":{"used":0}}' > "$tmp"
 python3 components/extensions/devflow/scripts/python/devflow_state.py bump "$tmp" budget.used
 python3 components/extensions/devflow/scripts/python/devflow_state.py get "$tmp" budget.used
@@ -470,12 +475,17 @@ echo '{}' | bash "$GATE" || fail "RED close should exit 0"
 after=$(git rev-list --count HEAD)
 [ "$after" -eq "$before" ] || fail "RED close must NOT commit"
 [ "$(read_state_key "$S" in_iteration)" = "false" ] || fail "in_iteration must clear on RED close"
+# honest RED closes count toward the parking cap
+python3 -c 'import json;s=json.load(open("specs/012-demo/loop/state.json"));assert s["attempts"]["T2"]==2, s["attempts"]' \
+  || fail "RED close must increment attempts (1→2)"
 
-# RED without a failure note → still blocked (exit 2)
-write_state "$S" in_iteration=true iteration=10 current_task='"T2"' iteration_outcome='"failed"'
+# RED without a failure note → still blocked (exit 2), attempts NOT bumped
+write_state "$S" in_iteration=true iteration=10 current_task='"T2"' iteration_outcome='"failed"' attempts='{"T2":1}'
 set +e; echo '{}' | bash "$GATE" 2>/dev/null; rc=$?; set -e
 [ "$rc" -eq 2 ] || fail "failed outcome without failure note must block, got $rc"
-pass "stop-gate RED: exits clean without commit; blocks when note missing"
+python3 -c 'import json;s=json.load(open("specs/012-demo/loop/state.json"));assert s["attempts"]["T2"]==1, s["attempts"]' \
+  || fail "blocked exit must NOT increment attempts"
+pass "stop-gate RED: clean no-commit exit + attempts bump; blocks (no bump) when note missing"
 ```
 
 - [ ] **Step 3: Write failing test `test-05-stop-gate-scope.sh`** (spec §6-5)
@@ -519,7 +529,8 @@ cat > /dev/null || true   # drain hook stdin; decisions come from disk only
 
 FEATURE_JSON=".specify/feature.json"
 [ -f "$FEATURE_JSON" ] || exit 0
-FDIR=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("dir",""))' "$FEATURE_JSON" 2>/dev/null) || exit 0
+FDIR=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("feature_directory",""))' "$FEATURE_JSON" 2>/dev/null) || exit 0
+[ -n "$FDIR" ] || exit 0
 STATE="$FDIR/loop/state.json"
 [ -f "$STATE" ] || exit 0
 
@@ -538,6 +549,8 @@ if [ "$OUTCOME" = '"failed"' ]; then
   TASK_KEY=$(echo "$TASK" | tr -d '"')
   NOTE=$(sget "failure_notes.$TASK_KEY")
   if [ -n "$NOTE" ] && [ "$NOTE" != "null" ]; then
+    # honest failures count toward the parking cap (attempts), unlike blocked exits
+    python3 "$STATE_PY" bump "$STATE" "attempts.$TASK_KEY"
     sset in_iteration false
     exit 0
   fi
@@ -554,7 +567,8 @@ fi
 
 # exactly one task newly checked this iteration
 DONE_AT_START=$(sget tasks_done_at_start | tr -d '"')
-DONE_NOW=$(grep -c '^- \[x\]' "$FDIR/tasks.md" 2>/dev/null || echo 0)
+# count in python: `grep -c || echo 0` emits "0\n0" on zero matches (grep prints 0 AND exits 1)
+DONE_NOW=$(python3 -c 'import re,sys;print(len(re.findall(r"^- \[x\]", open(sys.argv[1]).read(), re.M)))' "$FDIR/tasks.md" 2>/dev/null || echo 0)
 DELTA=$((DONE_NOW - DONE_AT_START))
 if [ "$DELTA" -ne 1 ]; then
   echo "DevFlow gate: expected exactly 1 task to complete this iteration, found $DELTA. One task per iteration — mark exactly one done (or mark the iteration failed)." >&2
@@ -562,10 +576,11 @@ if [ "$DELTA" -ne 1 ]; then
 fi
 
 # scoped tests green (command from config; empty command = misconfigured = block)
+# NOTE: regex is UNANCHORED — config values carry trailing "# comments"; a $-anchor never matches.
 TEST_CMD=$(python3 - <<'PY'
 import re
 txt = open(".specify/extensions/devflow/devflow-config.yml").read()
-m = re.search(r'^\s*test_scoped:\s*"(.*)"\s*$', txt, re.M)
+m = re.search(r'^\s*test_scoped:\s*"([^"]*)"', txt, re.M)
 print(m.group(1) if m else "")
 PY
 )
@@ -578,14 +593,16 @@ if ! bash -c "$TEST_CMD" > /tmp/devflow-scoped-test.log 2>&1; then
   exit 2
 fi
 
-# ---- GREEN close: commit + clear flag ----
+# ---- GREEN close: state FIRST, then commit (state mutations after commit would dirty the tree) ----
+sset iteration_outcome '"green"'
+sset in_iteration false
 git add -A
 if ! git diff --cached --quiet; then
   git commit -q -m "iter ${ITER}: ${TASK//\"/} (devflow green close)" || {
-    echo "DevFlow gate: auto-commit failed — resolve git state before ending." >&2; exit 2; }
+    sset in_iteration true   # revert: the close did not complete
+    echo "DevFlow gate: auto-commit failed — resolve git state before ending." >&2
+    exit 2; }
 fi
-sset in_iteration false
-sset iteration_outcome '"green"'
 exit 0
 ```
 
@@ -627,7 +644,8 @@ CFG=".specify/extensions/devflow/devflow-config.yml"
 [ -f "$CFG" ] || exit 0
 getcmd() { python3 -c '
 import re,sys
-m=re.search(r"^\s*"+sys.argv[2]+r":\s*\"(.*)\"\s*$", open(sys.argv[1]).read(), re.M)
+# unanchored: config values carry trailing "# comments"
+m=re.search(r"^\s*"+sys.argv[2]+r":\s*\"([^\"]*)\"", open(sys.argv[1]).read(), re.M)
 print(m.group(1) if m else "")' "$CFG" "$1"; }
 LINT=$(getcmd lint); TYPECHECK=$(getcmd typecheck)
 errors=""
@@ -646,14 +664,14 @@ exit 0
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "bash .specify/extensions/devflow/scripts/bash/devflow-postedit.sh" }
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.specify/extensions/devflow/scripts/bash/devflow-postedit.sh\"" }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "bash .specify/extensions/devflow/scripts/bash/devflow-stop-gate.sh" }
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.specify/extensions/devflow/scripts/bash/devflow-stop-gate.sh\"" }
         ]
       }
     ]
@@ -758,6 +776,7 @@ out=$(run_ls)
 echo "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["continue"]==False and d["reason"]=="tasks_exhausted", d' || fail "exhaustion brake: $out"
 
 # Brake 2 — budget: open tasks but budget.used >= total
+cd /tmp   # never rm -rf the directory we're standing in
 make_scratch_project "$S"; install_devflow_assets "$S"; cd "$S"
 write_state "$S" budget='{"used":5,"total":5}'
 out=$(run_ls)
@@ -800,7 +819,7 @@ Expected: FAIL (script missing)
 # Prints JSON {"continue","reason","open_tasks","budget_used","budget_total"}.
 set -euo pipefail
 cd "${CLAUDE_PROJECT_DIR:-.}"
-FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["dir"])')
+FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 STATE="$FDIR/loop/state.json"
 CFG=".specify/extensions/devflow/devflow-config.yml"
 python3 - "$STATE" "$FDIR/tasks.md" "$CFG" <<'PY'
@@ -962,7 +981,7 @@ pass "convert-findings: fix-tasks appended, state flipped, clean no-op"
 set -euo pipefail
 cd "${CLAUDE_PROJECT_DIR:-.}"
 MODE="${1:-attended}"
-FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["dir"])')
+FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 mkdir -p "$FDIR/loop" "$FDIR/review" .specify/devflow docs/decisions
 python3 - "$FDIR" "$MODE" <<'PY'
 import json, sys, os, datetime, re
@@ -996,7 +1015,7 @@ PY
 #!/usr/bin/env bash
 set -euo pipefail
 cd "${CLAUDE_PROJECT_DIR:-.}"
-FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["dir"])')
+FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 python3 - "$FDIR" <<'PY'
 import json, math, re, sys
 fdir = sys.argv[1]
@@ -1031,7 +1050,7 @@ PY
 set -euo pipefail
 cd "${CLAUDE_PROJECT_DIR:-.}"
 CYCLE="${1:?usage: devflow-convert-findings.sh <cycle>}"
-FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["dir"])')
+FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 python3 - "$FDIR" "$CYCLE" <<'PY'
 import json, math, re, sys
 fdir, cycle = sys.argv[1], int(sys.argv[2])
@@ -1045,8 +1064,15 @@ lines = []
 for f in fj["open"]:
     lines.append(f"- [ ] {f['id']} fix: {f['summary']} (finding {f['id']})")
     lines.append(f"  - AC: finding {f['id']} no longer reproduces; regression test added")
-with open(f"{fdir}/tasks.md", "a") as t:
-    t.write("\n## Fix-tasks (review cycle %d)\n%s\n" % (cycle, "\n".join(lines)))
+# Idempotent per cycle: workflow resume re-runs the whole if-branch (engine re-executes
+# parent + nested body), so a second invocation for the same cycle must not duplicate tasks.
+marker = f"## Fix-tasks (review cycle {cycle})"
+tasks_txt = open(f"{fdir}/tasks.md").read()
+if marker in tasks_txt:
+    print(f"devflow: cycle {cycle} already converted — skipping append")
+else:
+    with open(f"{fdir}/tasks.md", "a") as t:
+        t.write("\n%s\n%s\n" % (marker, "\n".join(lines)))
 sp = f"{fdir}/loop/state.json"
 state = json.load(open(sp))
 state["entry"] = "fix-tasks"; state["cycle"] = cycle
@@ -1063,7 +1089,7 @@ PY
 # Verify-phase prerequisite (gap B): review artifact must exist and be clean-or-parked.
 set -euo pipefail
 cd "${CLAUDE_PROJECT_DIR:-.}"
-FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["dir"])')
+FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 FJ="$FDIR/review/findings.json"
 if [ ! -f "$FJ" ]; then
   echo "devflow: BLOCKED — Review has not produced $FJ. Verify cannot run (gap B guard)." >&2
@@ -1081,7 +1107,7 @@ esac
 #!/usr/bin/env bash
 set -euo pipefail
 cd "${CLAUDE_PROJECT_DIR:-.}"
-FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["dir"])')
+FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 python3 - "$FDIR" <<'PY'
 import glob, json, re, sys, os
 fdir = sys.argv[1]
@@ -1203,14 +1229,14 @@ PY
 )
 raw=$(printf '%s' "$payload" | bash -c "$DEVFLOW_JUDGE_CMD" 2>/tmp/devflow-judge.err) || {
   echo "devflow-judge: judge command failed (see /tmp/devflow-judge.err)" >&2; exit 1; }
-printf '%s' "$raw" | python3 - <<'PY' || { echo "devflow-judge: malformed verdict JSON — treating as FAIL (fail-safe)" >&2; exit 1; }
+# NOTE: script via -c, data via argv — a `python3 - <<EOF` heredoc would steal stdin from the pipe.
+python3 -c '
 import json, sys
-d = json.load(sys.stdin)
+d = json.loads(sys.argv[1])
 assert d.get("verdict") in ("PASS", "FAIL"), "verdict must be PASS|FAIL"
 assert isinstance(d.get("reason"), str), "reason must be a string"
 assert isinstance(d.get("criteria"), list), "criteria must be a list"
-print(json.dumps(d))
-PY
+print(json.dumps(d))' "$raw" || { echo "devflow-judge: malformed verdict JSON — treating as FAIL (fail-safe)" >&2; exit 1; }
 ```
 
 - [ ] **Step 4: Run → verify PASS**
@@ -1384,6 +1410,26 @@ assert "devflow-check-review.sh" in find("verify-prereq")["run"]
 mode = d["inputs"]["mode"]
 assert mode["enum"] == ["attended", "attended-step", "autonomous"] and mode["default"] == "attended"
 
+# integration wiring: input exists with default auto; EVERY command step carries it (dispatch fails without)
+assert d["inputs"]["integration"]["default"] == "auto"
+def walk(steps):
+    for s in steps:
+        yield s
+        for key in ("steps", "then", "else"):
+            if key in s: yield from walk(s[key])
+        for case in s.get("cases", {}).values(): yield from walk(case)
+        if s.get("default"): yield from walk(s["default"])
+cmds = [s for s in walk(steps) if "command" in s]
+missing = [s["id"] for s in cmds if s.get("integration") != "{{ inputs.integration }}"]
+assert not missing, f"command steps missing integration wiring: {missing}"
+
+# cap-park + accept-with-parked reconcile routing exist (spec §6-9/§6-10 structural halves)
+fix2 = find("fix-cycle-2")
+assert any(x["id"] == "park-findings" for x in fix2["then"]), "park-findings missing from cycle 2"
+accept_case = find("route-stop2")["cases"]["accept"]
+accept_ids = [x["id"] for x in accept_case]
+assert "reconcile-if-parked" in accept_ids and "reconcile-parked" in accept_ids, accept_ids
+
 # forbidden vocabulary
 assert "supervised" not in flat
 print("workflow structural checks pass")
@@ -1419,26 +1465,38 @@ inputs:
     default: "attended"
     enum: ["attended", "attended-step", "autonomous"]
     prompt: "Loop mode (attended | attended-step | autonomous)"
+  integration:
+    type: string
+    default: "auto"
+    prompt: "Integration ('auto' uses the project's initialized integration; DevFlow targets claude)"
 
+# CRITICAL (verified): without integration wiring every command step fails dispatch —
+# engine default_integration is None and _try_dispatch returns None. Mirror the core
+# speckit workflow: integration input default "auto" + per-step integration expression.
 steps:
   # ---------- Frame ----------
   - id: specify
     command: speckit.specify
+    integration: "{{ inputs.integration }}"
     input: { args: "{{ inputs.feature }}" }
   - id: brainstorm
     command: speckit.superspec.brainstorm
+    integration: "{{ inputs.integration }}"
     input: { args: "pressure-test the spec for edge cases and contradictions" }
   - id: clarify
     command: speckit.clarify
+    integration: "{{ inputs.integration }}"
     continue_on_error: true          # clarify is optional-by-outcome
     input: { args: "" }
 
   # ---------- Plan ----------
   - id: plan
     command: speckit.plan
+    integration: "{{ inputs.integration }}"
     input: { args: "" }
   - id: tasks
     command: speckit.tasks
+    integration: "{{ inputs.integration }}"
     input: { args: "" }
 
   # ---------- Loop state + leash ----------
@@ -1452,6 +1510,7 @@ steps:
   # ---------- Analyze + STOP #1 ----------
   - id: analyze
     command: speckit.analyze
+    integration: "{{ inputs.integration }}"
     input: { args: "" }
   - id: stop1
     type: gate
@@ -1468,6 +1527,7 @@ steps:
     steps:
       - id: iterate
         command: speckit.devflow.iterate
+        integration: "{{ inputs.integration }}"
         continue_on_error: true
         input: { args: "" }
       - id: loop-status
@@ -1478,13 +1538,14 @@ steps:
   # ---------- Review (cycle 0) ----------
   - id: review
     command: speckit.devflow.review
+    integration: "{{ inputs.integration }}"
     input: { args: "" }
 
   # ---------- Loopback cycle 1 (unrolled) ----------
   - id: findings-check-1
     type: shell
     output_format: json
-    run: python3 -c "import json;d=json.load(open('.specify/feature.json'));f=json.load(open(d['dir']+'/review/findings.json'));print(json.dumps({'status':f['status']}))"
+    run: python3 -c "import json;d=json.load(open('.specify/feature.json'));f=json.load(open(d['feature_directory']+'/review/findings.json'));print(json.dumps({'status':f['status']}))"
   - id: fix-cycle-1
     type: if
     condition: "{{ steps.findings-check-1.output.data.status == 'findings' }}"
@@ -1499,6 +1560,7 @@ steps:
         steps:
           - id: iterate-f1
             command: speckit.devflow.iterate
+            integration: "{{ inputs.integration }}"
             continue_on_error: true
             input: { args: "" }
           - id: loop-status-f1
@@ -1507,13 +1569,14 @@ steps:
             run: bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh
       - id: re-review-1
         command: speckit.devflow.review
+        integration: "{{ inputs.integration }}"
         input: { args: "full re-review, cycle 1" }
 
   # ---------- Loopback cycle 2 (unrolled) ----------
   - id: findings-check-2
     type: shell
     output_format: json
-    run: python3 -c "import json;d=json.load(open('.specify/feature.json'));f=json.load(open(d['dir']+'/review/findings.json'));print(json.dumps({'status':f['status']}))"
+    run: python3 -c "import json;d=json.load(open('.specify/feature.json'));f=json.load(open(d['feature_directory']+'/review/findings.json'));print(json.dumps({'status':f['status']}))"
   - id: fix-cycle-2
     type: if
     condition: "{{ steps.findings-check-2.output.data.status == 'findings' }}"
@@ -1528,6 +1591,7 @@ steps:
         steps:
           - id: iterate-f2
             command: speckit.devflow.iterate
+            integration: "{{ inputs.integration }}"
             continue_on_error: true
             input: { args: "" }
           - id: loop-status-f2
@@ -1536,12 +1600,13 @@ steps:
             run: bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh
       - id: re-review-2
         command: speckit.devflow.review
+        integration: "{{ inputs.integration }}"
         input: { args: "full re-review, cycle 2 (final)" }
       # cap spent: surviving findings are parked with history
       - id: park-findings
         type: shell
         run: >-
-          python3 -c "import json;d=json.load(open('.specify/feature.json'));p=d['dir']+'/review/findings.json';f=json.load(open(p));
+          python3 -c "import json;d=json.load(open('.specify/feature.json'));p=d['feature_directory']+'/review/findings.json';f=json.load(open(p));
           f['status']='parked' if f['status']=='findings' else f['status'];json.dump(f,open(p,'w'),indent=2);print(f['status'])"
 
   # ---------- Verify (gap-B prerequisite, then the phase) ----------
@@ -1550,6 +1615,7 @@ steps:
     run: bash .specify/extensions/devflow/scripts/bash/devflow-check-review.sh
   - id: verify
     command: speckit.devflow.verify
+    integration: "{{ inputs.integration }}"
     input: { args: "" }
 
   # ---------- STOP #2 + routing ----------
@@ -1572,8 +1638,8 @@ steps:
           type: shell
           output_format: json
           run: >-
-            python3 -c "import json;d=json.load(open('.specify/feature.json'));s=json.load(open(d['dir']+'/loop/state.json'));
-            f=json.load(open(d['dir']+'/review/findings.json'));
+            python3 -c "import json;d=json.load(open('.specify/feature.json'));s=json.load(open(d['feature_directory']+'/loop/state.json'));
+            f=json.load(open(d['feature_directory']+'/review/findings.json'));
             print(json.dumps({'needs': bool(s['parked']) or f['status']=='parked'}))"
         - id: reconcile-parked
           type: if
@@ -1581,28 +1647,36 @@ steps:
           then:
             - id: reconcile-a
               command: speckit.devflow.reconcile-contract
+              integration: "{{ inputs.integration }}"
               input: { args: "descope: document parked tasks/findings in the contract" }
         - id: ship-a
           command: speckit.git.validate
+          integration: "{{ inputs.integration }}"
           input: { args: "" }
         - id: ship-commit-a
           command: speckit.git.commit
+          integration: "{{ inputs.integration }}"
           input: { args: "" }
         - id: capture-a
           command: speckit.devflow.capture
+          integration: "{{ inputs.integration }}"
           input: { args: "" }
       accept-with-deviation:
         - id: reconcile-b
           command: speckit.devflow.reconcile-contract
+          integration: "{{ inputs.integration }}"
           input: { args: "accepted deviation: update contract text + ADR" }
         - id: ship-b
           command: speckit.git.validate
+          integration: "{{ inputs.integration }}"
           input: { args: "" }
         - id: ship-commit-b
           command: speckit.git.commit
+          integration: "{{ inputs.integration }}"
           input: { args: "" }
         - id: capture-b
           command: speckit.devflow.capture
+          integration: "{{ inputs.integration }}"
           input: { args: "" }
     default: []   # unreachable: reject aborts at the gate
 ```
@@ -1751,7 +1825,7 @@ git add components/ bundle/ && git commit -m "feat: plan-hardening preset + fina
 source "$(dirname "$0")/helpers.sh"
 command -v specify >/dev/null || fail "specify CLI not on PATH"
 S=$(mktemp -d)
-( cd "$S" && specify init . --ai claude --ignore-agent-tools --no-git >/dev/null 2>&1 ) \
+( cd "$S" && specify init . --integration claude --ignore-agent-tools >/dev/null 2>&1 ) \
   || fail "specify init failed (check flags with 'specify init --help')"
 cd "$S"
 # install our three authored components from the repo working tree
@@ -1773,7 +1847,7 @@ pass "components install with real primitives; bundle validates"
 source "$(dirname "$0")/helpers.sh"
 command -v specify >/dev/null || fail "specify CLI not on PATH"
 S=$(mktemp -d)
-( cd "$S" && specify init . --ai claude --ignore-agent-tools --no-git >/dev/null 2>&1 )
+( cd "$S" && specify init . --integration claude --ignore-agent-tools >/dev/null 2>&1 )
 cd "$S"
 specify extension add "$REPO_ROOT/components/extensions/devflow" --dev >/dev/null
 specify preset add --dev "$REPO_ROOT/components/presets/devflow-plan-hardening" >/dev/null
@@ -1781,7 +1855,21 @@ specify workflow add "$REPO_ROOT/components/workflows/devflow/workflow.yml" >/de
 cp -R "$REPO_ROOT/bundle" ./bundle
 specify bundle build --path ./bundle --output ./dist || fail "bundle build"
 ls dist/devflow-0.1.0.zip >/dev/null || fail "artifact missing"
-pass "bundle builds: dist/devflow-0.1.0.zip"
+
+# §6-2 second half: install into the scratch project must be idempotent and match the §5 footprint.
+# (Components are already installed above via --dev, so bundle install should skip them — run it
+# twice and require identical outcomes; adjust invocation from `specify bundle install --help`
+# if the local-artifact form differs — do not fake the step.)
+specify bundle install ./bundle --path ./bundle 2>/dev/null || specify bundle install devflow 2>/dev/null || true
+out1=$(ls -R .specify/extensions/devflow .specify/workflows 2>/dev/null | md5sum 2>/dev/null || ls -R .specify/extensions/devflow .specify/workflows | md5 -q)
+specify bundle install ./bundle --path ./bundle 2>/dev/null || specify bundle install devflow 2>/dev/null || true
+out2=$(ls -R .specify/extensions/devflow .specify/workflows 2>/dev/null | md5sum 2>/dev/null || ls -R .specify/extensions/devflow .specify/workflows | md5 -q)
+[ "$out1" = "$out2" ] || fail "bundle install not idempotent"
+# §5 footprint spot-checks
+[ -d .specify/extensions/devflow/scripts/bash ] || fail "footprint: devflow scripts missing"
+[ -f .specify/extensions/devflow/devflow-config.yml ] || fail "footprint: devflow config missing"
+ls .specify/workflows/devflow* >/dev/null 2>&1 || fail "footprint: workflow missing"
+pass "bundle builds + install idempotent + §5 footprint present"
 ```
 
 - [ ] **Step 3: Run both** → Expected: PASS, PASS. Fix whatever the real CLI rejects (this is the step that catches every remaining schema mismatch — treat CLI errors as the source of truth and update components accordingly).
@@ -1811,7 +1899,7 @@ git add tests/ && git commit -m "test: bundle validate + build against real spec
 - [ ] **Step 1: Write `MANUAL.md`** — the live-Claude checks automation can't cover, each with exact commands + expected observation:
   1. (§6-3 live) In a scratch project with hooks installed and `in_iteration:true` staged, run `claude -p "edit a file and finish"` → observe the Stop-gate block message in the transcript, then compliance.
   2. (§6-6 live) Full `specify workflow run devflow --input feature="tiny demo" --input mode=attended` on a toy repo through STOP #2 (gates pause; `specify workflow resume` in a TTY).
-  3. (§6-7 live) Set `DEVFLOW_JUDGE_CMD` to a real second-family CLI; verify verdicts flow into state and a seeded FAIL causes a retry that references the verdict.
+  3. (§6-7 live) Set `DEVFLOW_JUDGE_CMD` to a real second-family CLI; verify verdicts flow into state and a seeded FAIL causes a retry that references the verdict. Also run onboard with a judge that IS the maker's family and confirm the same-family warning fires.
   4. (§6-10 live) At STOP #2 choose accept-with-deviation → confirm reconcile edits spec.md + writes the ADR before git.validate runs.
   5. attended-step: confirm the pause behavior at iteration boundaries; note v0.2 engine-level plan.
   6. `--bare` guard: confirm the spec-kit claude dispatch invocation contains no `--bare` (inspect `specify workflow run` output/verbose).
@@ -1834,6 +1922,7 @@ git add -A && git commit -m "docs: manual dogfood checklist; status truth-up acr
 ## Plan self-review (done at authoring time)
 
 - **Spec coverage:** §2 consumer UX → Tasks 8–9; §3 manifest → Task 10; §4.1 extension → Tasks 2–8; §4.2 workflow + schemas → Tasks 5–6, 9; §4.3 preset → Task 10; §5 footprint → onboard (Task 8) + install tests (Task 11); §6 acceptance 1→T11, 2→T11, 3→T3, 4→T3, 5→T3, 6→T5+MANUAL, 7→T7(+MANUAL live), 8→T6, 9→T6(+MANUAL live loopback), 10→T9 switch topology(+MANUAL live), 11→T6, 12→T1; §7 non-goals — nothing here implements them; §8 risks — factor in config (T2), gate quality (T3 tests), pins exact (T10).
-- **Notable deviations from spec (intentional, argued inline):** three extra commands (`review`, `verify`, `capture`) because those phases need devflow-owned dispatch targets (spec §4.2 references them implicitly); `attended-step`'s engine-level pause deferred to v0.2 with behavior documented (verified engine constraint: nested gate resume re-runs the loop body); preset templates are full replacements (verified preset semantics) rather than literal "appends".
+- **Notable deviations from spec (intentional, argued inline):** three extra commands (`review`, `verify`, `capture`) because those phases need devflow-owned dispatch targets (spec §4.2 references them implicitly); `attended-step`'s engine-level pause deferred to v0.2 with behavior documented (verified engine constraint: nested gate resume re-runs the loop body); preset templates are full replacements (verified preset semantics) rather than literal "appends"; `init-loop` runs AFTER Tasks, not first as spec §4.2 sketches (`.specify/feature.json` doesn't exist until specify runs — the reorder is required); the spec's proposed `.specify/devflow-current.json` pointer is dropped in favor of spec-kit's own `.specify/feature.json` (`feature_directory` key — the real contract, verified in core_pack).
+- **Review pass (Fable, 2026-07-14):** 5 critical + 4 major findings applied — feature_directory key contract (C1), workflow integration wiring (C2), judge stdin heredoc conflict (C3), unanchored config regex (C4), gate state-before-commit ordering (C5), RED-close attempts bump (M6), real `specify init` flags (M7), install-idempotency coverage (M8), idempotent findings conversion (M9) — plus minors (python task counting, $CLAUDE_PROJECT_DIR hook paths, pyyaml bootstrap, test-06 cwd safety, structural asserts for park/reconcile routing). Confirmed-good by the same pass: nested do-while inside if-branches (engine.py:968-1016), `type: if` key, `--dev` CLI forms, advisory `requires.integrations`, budget arithmetic, gate `show_file`.
 - **Type consistency:** state keys, script paths, command names, and schema fields are identical across Tasks 3–9 (single source: Global Constraints block).
 

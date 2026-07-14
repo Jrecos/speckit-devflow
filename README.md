@@ -100,11 +100,24 @@ claude                                  # then, inside your project:
 export DEVFLOW_JUDGE_CMD='<your cross-family judge command>'   # optional but recommended —
                                         # unset = Claude judges Claude (same-family fallback,
                                         # warns every run; ADR-0018)
+```
 
+Then run a feature **either way** — same protocol, same gates, same scripts underneath:
+
+```bash
+# A · from your terminal (the spec-kit engine drives; works headless/CI)
 specify workflow run devflow \
   --input feature="describe the feature" \
   --input mode=attended                 # attended | attended-step | autonomous
+
+# B · from inside Claude Code (conversational gates, guarded flow ledger; ADR-0019)
+/speckit-devflow-start describe the feature
 ```
+
+Path B keeps a **phase ledger** (`specs/<feature>/devflow-flow.json`) that a mechanical
+guard advances only when each phase's artifacts actually exist on disk — brainstorming and
+both STOPs happen in the conversation, while loop iterations still dispatch as fresh
+`claude -p` sessions. Any later session resumes with `/speckit-devflow-start`.
 
 Then you make exactly two decisions:
 

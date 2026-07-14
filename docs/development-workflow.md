@@ -47,11 +47,24 @@ Malformed verdict or no resolvable judge at all → fail-safe block.
 
 ## Stage 2 — per feature: one command, two decisions
 
+Two equivalent drivers — pick per run ([ADR-0019](decisions/0019-claude-native-orchestrator.md)):
+
 ```bash
+# A · engine-driven (terminal; headless/CI-friendly)
 specify workflow run devflow \
   --input feature="what you want built" \
   --input mode=attended        # attended | attended-step | autonomous  (ADR-0013)
+
+# B · Claude-native (inside a claude session; conversational gates)
+/speckit-devflow-start what you want built
 ```
+
+Both walk the same phase map below with the same guarantees — the enforcement lives in
+shared scripts, not in whichever driver you chose. Path B additionally maintains
+`specs/<feature>/devflow-flow.json`: a phase ledger advanced by a **mechanical guard**
+(`devflow-flow.sh`) that refuses out-of-order transitions and phases whose exit artifacts
+don't exist — brainstorm/clarify/STOPs become conversation, loop iterations still dispatch
+as fresh headless sessions, and any new session resumes from the ledger.
 
 ### Phase map
 

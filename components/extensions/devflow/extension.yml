@@ -21,6 +21,9 @@ requires:
 
 provides:
   commands:
+    - name: speckit.devflow.start
+      file: commands/speckit.devflow.start.md
+      description: "Drive the complete DevFlow pipeline from inside Claude Code: guarded flow ledger, in-conversation gates, dispatched loop iterations (Claude-only orchestrator)"
     - name: speckit.devflow.onboard
       file: commands/speckit.devflow.onboard.md
       description: "Validate and install every DevFlow prerequisite at project scope: commands config, semgrep MCP, judge seam, hooks pack, checker subagent, CLAUDE.md protocol"

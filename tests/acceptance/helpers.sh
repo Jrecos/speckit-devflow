@@ -52,7 +52,7 @@ install_devflow_assets() {
 write_state() {
   local dir="$1"; shift
   python3 - "$dir/specs/012-demo/loop/state.json" "$@" <<'PY'
-import json, sys, os
+import json, sys, os, datetime
 path = sys.argv[1]
 state = {
   "feature": "012-demo", "feature_dir": "specs/012-demo",
@@ -61,7 +61,8 @@ state = {
   "current_task": None, "tasks_done_at_start": 1, "last_record": None,
   "iteration_outcome": None,
   "budget": {"used": 0, "total": 5},
-  "started_at": "2026-07-14T00:00:00+00:00", "time_box_hours": 4,
+  # default started_at = NOW so the time-box brake only fires when a test overrides it
+  "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(), "time_box_hours": 4,
   "attempts": {}, "parked": [], "verdicts": {}, "failure_notes": {},
   "cycle": 0, "continue": True, "exit_reason": None,
 }

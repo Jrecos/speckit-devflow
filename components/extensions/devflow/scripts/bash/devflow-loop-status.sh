@@ -47,6 +47,16 @@ else:
     if hours >= float(state.get("time_box_hours", 4)):
         reason = "time_box_exceeded"
 
+# Budget/time exhaustion is a CLEAN PARK (ADR-0016): remaining open tasks are parked
+# with a note, so STOP #2's accept path routes through reconcile-contract (gap D guard —
+# plain accept must never ship open work without a spec edit).
+if reason in ("budget_exhausted", "time_box_exceeded"):
+    for t in pickable:
+        if t not in state["parked"]:
+            state["parked"].append(t)
+            state["failure_notes"][t] = state["failure_notes"].get(t) or \
+                f"parked without attempt: loop ended ({reason})"
+
 state["continue"] = reason is None
 state["exit_reason"] = reason
 json.dump(state, open(state_p, "w"), indent=2)

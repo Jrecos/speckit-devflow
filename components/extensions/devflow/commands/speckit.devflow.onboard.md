@@ -12,11 +12,14 @@ where every line is ✓ can run `specify workflow run devflow` immediately.
 1. **Tools:** verify `git` and `claude` are on PATH (`command -v`). Verify this is
    a git repo with at least one commit.
 2. **Semgrep MCP:** run `claude mcp list`; if `semgrep` is absent, run:
-   `claude mcp add semgrep --scope project uvx semgrep-mcp --metrics off`
+   `claude mcp add semgrep --scope project -- uvx semgrep-mcp --metrics off`
+   (the `--` separates the server command from claude's own flags).
 3. **Project commands:** detect the project's lint / typecheck / scoped-test /
    full-test commands (inspect package.json scripts, Makefile, pyproject.toml,
    etc.). Present your proposals to the human, then write the confirmed values
-   into `.specify/extensions/devflow/devflow-config.yml` under `commands:`.
+   into `.specify/extensions/devflow/devflow-config.yml` under `commands:` —
+   **keep each value double-quoted** (`test_scoped: "npm test"`): the hook
+   scripts parse quoted values only; an unquoted value reads as empty.
    These power the hooks — with empty values the PostToolUse critic is inert and
    the Stop gate blocks every GREEN close.
 4. **Judge seam:** check `DEVFLOW_JUDGE_CMD` is set in the environment. If set,

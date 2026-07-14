@@ -69,6 +69,18 @@ accept_case = find("route-stop2")["cases"]["accept"]
 accept_ids = [x["id"] for x in accept_case]
 assert "reconcile-if-parked" in accept_ids and "reconcile-parked" in accept_ids, accept_ids
 
+# time-box clock re-stamps AFTER stop1 (a paused gate must not eat the box)
+assert ids.index("start-clock") == ids.index("stop1") + 1, "start-clock must directly follow stop1"
+assert "started_at" in find("start-clock")["run"]
+
+# attended-step: every loop body carries a conditional step-gate (mode comparison in ONE {{ }})
+for lp in loops:
+    pause = next((b for b in lp["steps"] if b.get("type") == "if" and "attended-step" in str(b.get("condition"))), None)
+    assert pause is not None, f"loop {lp['id']} missing attended-step pause"
+    assert pause["condition"].count("{{") == 1, "mode comparison must live inside one {{ }} block"
+    gate = pause["then"][0]
+    assert gate["type"] == "gate" and gate["options"][-1] == "reject"
+
 # feature.json contract: only feature_directory is read, never 'dir'
 assert "feature_directory" in flat and "d['dir']" not in flat
 

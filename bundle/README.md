@@ -29,8 +29,9 @@ specify workflow run devflow --input feature="..." --input mode=attended
 ```
 
 - **Modes** (ADR-0013): `attended` (live output, base allowlist, never waits) ·
-  `attended-step` (blocking pause per iteration boundary; engine-level step-pause is a
-  v0.2 item) · `autonomous` (headless allowlist via `SPECKIT_INTEGRATION_CLAUDE_EXTRA_ARGS`).
+  `attended-step` (a blocking gate at every iteration boundary — resume continues
+  with exactly the next iteration) · `autonomous` (headless allowlist via
+  `SPECKIT_INTEGRATION_CLAUDE_EXTRA_ARGS`, set by the operator).
 - **Two human decisions per feature:** STOP #1 (plan + red tests + leash) and
   STOP #2 (accept / accept-with-deviation / reject, full evidence).
 - **The judge seam** (ADR-0014): set `DEVFLOW_JUDGE_CMD` in your environment to any

@@ -15,12 +15,17 @@ write_state "$S" budget='{"used":1,"total":5}'
 out=$(run_ls)
 echo "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["continue"]==False and d["reason"]=="tasks_exhausted", d' || fail "exhaustion brake: $out"
 
-# Brake 2 — budget: open tasks but budget.used >= total
+# Brake 2 — budget: open tasks but budget.used >= total → clean park of remaining tasks
 cd /tmp   # never rm -rf the directory we're standing in
 make_scratch_project "$S"; install_devflow_assets "$S"; cd "$S"
 write_state "$S" budget='{"used":5,"total":5}'
 out=$(run_ls)
 echo "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["continue"]==False and d["reason"]=="budget_exhausted", d' || fail "budget brake: $out"
+# gap-D guard: exhaustion parks ALL remaining open tasks (so accept routes via reconcile)
+python3 -c '
+import json;s=json.load(open("specs/012-demo/loop/state.json"))
+assert set(s["parked"]) >= {"T1","T2"}, s["parked"]
+assert "T1" in s["failure_notes"], s["failure_notes"]' || fail "budget exhaustion must park open tasks"
 
 # Brake 3 — time-box: started_at years ago with 4h box
 write_state "$S" budget='{"used":1,"total":5}' started_at='"2020-01-01T00:00:00+00:00"'

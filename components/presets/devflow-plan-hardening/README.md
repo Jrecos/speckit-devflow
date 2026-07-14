@@ -2,8 +2,11 @@
 
 Replaces the core `speckit.plan` and `speckit.tasks` command templates with
 DevFlow-hardened versions (spec-kit presets replace templates via
-`provides.templates[].replaces`; the bundle's `strategy: append` / `priority: 10`
-control catalog resolution order, not text merging).
+`provides.templates[].replaces`; the bundle pins `strategy: replace` to match).
+The replacement templates are full lean-style commands (same structure as
+spec-kit's own `lean` preset: read `.specify/feature.json`, load context, produce
+the artifact) plus the DevFlow hardening requirements — they supersede, not
+decorate, the core templates.
 
 What the hardening adds:
 

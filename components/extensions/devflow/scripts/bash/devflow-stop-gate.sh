@@ -34,6 +34,7 @@ if [ "$OUTCOME" = '"failed"' ]; then
     # honest failures count toward the parking cap (attempts), unlike blocked exits
     python3 "$STATE_PY" bump "$STATE" "attempts.$TASK_KEY"
     sset in_iteration false
+    sset current_task null   # avoid backstop mis-attribution if the next dispatch dies early
     exit 0
   fi
   echo "DevFlow gate: iteration marked failed but no failure note for $TASK_KEY. Write the failure note to loop state (failure_notes) before ending." >&2
@@ -78,6 +79,7 @@ fi
 # ---- GREEN close: state FIRST, then commit (state mutations after commit would dirty the tree) ----
 sset iteration_outcome '"green"'
 sset in_iteration false
+sset current_task null   # avoid backstop mis-attribution if the next dispatch dies early
 git add -A
 if ! git diff --cached --quiet; then
   git commit -q -m "iter ${ITER}: ${TASK//\"/} (devflow green close)" || {

@@ -74,6 +74,13 @@ steps:
     options: [approve, reject]
     on_reject: abort
 
+  # The time-box clock starts AFTER approval — init stamped it before Analyze/STOP #1,
+  # and a paused-then-resumed gate (the documented non-TTY flow) must not eat the box.
+  - id: start-clock
+    type: shell
+    run: >-
+      python3 -c "import json,datetime;d=json.load(open('.specify/feature.json'));p=d['feature_directory']+'/loop/state.json';s=json.load(open(p));s['started_at']=datetime.datetime.now(datetime.timezone.utc).isoformat();json.dump(s,open(p,'w'),indent=2);print('devflow clock started')"
+
   # ---------- Build loop ----------
   - id: build-loop
     type: do-while
@@ -89,6 +96,18 @@ steps:
         type: shell
         output_format: json
         run: bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh
+      # attended-step: blocking pause at every iteration boundary. A paused nested gate
+      # re-runs the loop body on resume — iterate picks the NEXT task from disk state,
+      # so each resume = exactly one more iteration (the intended semantics).
+      - id: step-pause
+        type: if
+        condition: "{{ inputs.mode == 'attended-step' }}"
+        then:
+          - id: step-gate
+            type: gate
+            message: "attended-step: iteration boundary reached (see loop status above). Continue the loop?"
+            options: [continue, reject]
+            on_reject: abort
 
   # ---------- Review (cycle 0) ----------
   - id: review
@@ -122,6 +141,15 @@ steps:
             type: shell
             output_format: json
             run: bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh
+          - id: step-pause-f1
+            type: if
+            condition: "{{ inputs.mode == 'attended-step' }}"
+            then:
+              - id: step-gate-f1
+                type: gate
+                message: "attended-step: fix-loop iteration boundary. Continue?"
+                options: [continue, reject]
+                on_reject: abort
       - id: re-review-1
         command: speckit.devflow.review
         integration: "{{ inputs.integration }}"
@@ -153,6 +181,15 @@ steps:
             type: shell
             output_format: json
             run: bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh
+          - id: step-pause-f2
+            type: if
+            condition: "{{ inputs.mode == 'attended-step' }}"
+            then:
+              - id: step-gate-f2
+                type: gate
+                message: "attended-step: fix-loop iteration boundary. Continue?"
+                options: [continue, reject]
+                on_reject: abort
       - id: re-review-2
         command: speckit.devflow.review
         integration: "{{ inputs.integration }}"

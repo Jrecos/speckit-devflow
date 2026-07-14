@@ -48,9 +48,12 @@ through reconcile first; `reject` ends the run with no Ship steps executed.
 ## 5. attended-step behavior
 
 Run with `--input mode=attended-step`.
-**Expect (v0.1):** iterate reads the mode and announces the boundary pause
-behavior; engine-level per-iteration blocking gate is a documented v0.2 item
-(nested-gate resume re-runs the loop body — verified engine constraint).
+**Expect:** after each iteration's loop-status, the `step-gate` pauses the run
+("iteration boundary reached… Continue?"). In a TTY, choosing `continue` runs
+exactly one more iteration. Non-TTY: the run pauses; `specify workflow resume`
+re-runs the loop body — iterate picks the NEXT task from disk state, so each
+resume advances exactly one iteration (state-idempotency makes the re-run safe).
+Choosing `reject` aborts the run.
 
 ## 6. --bare guard
 

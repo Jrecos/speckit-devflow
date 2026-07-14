@@ -95,7 +95,7 @@ provides:
     - { id: superspec, version: "1.0.1" }   # prerequisite — called at seams (ADR-0006)
     - { id: devflow,   version: "0.1.0" }   # ours (ADR-0007)
   presets:
-    - { id: devflow-plan-hardening, version: "0.1.0", priority: 10, strategy: append }
+    - { id: devflow-plan-hardening, version: "0.1.0", priority: 10, strategy: replace }
   steps: []                                  # none — ADR-0010
   workflows:
     - { id: devflow, version: "0.1.0" }
@@ -160,7 +160,7 @@ lifecycle hooks and is *not* used for these.)
 loop:
   iteration_factor: 2.5      # budget = ceil(open_tasks × factor); shown at STOP #1
   max_attempts_per_task: 2   # attempts before parking (renamed from retry_cap, ADR-0016)
-  time_box: 4h
+  time_box_hours: 4
 review:
   cycles: 2                  # documented unroll depth of the workflow (ADR-0016)
 commands:                    # detected/confirmed by onboard — hooks are inert without them
@@ -189,8 +189,8 @@ files (stdout is not capturable for conditions — verified). Workflows are step
 **no backward edges**, so the review loopback is **statically unrolled** (cycles = 2):
 
 ```
-init (shell) → writes .specify/devflow-current.json {feature_dir}
-             → writes loop/state.json initial schema (see below)
+init (shell) → writes loop/state.json initial schema (see below); the feature
+             pointer is spec-kit's own .specify/feature.json (feature_directory)
 → Frame: specify(command) → superspec.brainstorm(command) → clarify(command)   # 3 steps
 → Plan(command) → Tasks(command)      # preset-hardened: red acceptance tests +
                                       # per-task acceptance criteria + task-count line
@@ -227,10 +227,16 @@ init (shell) → writes .specify/devflow-current.json {feature_dir}
 ```
 
 **`loop/state.json` schema** (written by init, updated by iterate/gate/shell steps):
-`feature`, `mode`, `entry` (tasks|fix-tasks), `in_iteration`, `iteration`,
-`iteration_outcome`, `budget {used,total}`, `started_at`, `time_box`,
-`attempts {task: n}`, `parked []`, `verdicts {task: {verdict, reason}}`,
-`failure_notes {task: note}`, `cycle`, `continue`, `exit_reason`.
+`feature`, `feature_dir`, `mode`, `entry` (tasks|fix-tasks), `in_iteration`,
+`iteration`, `current_task`, `tasks_done_at_start` (refreshed by iterate at every
+open — the gate's one-task check computes against it), `last_record`,
+`iteration_outcome`, `budget {used,total}`, `started_at` (re-stamped after STOP #1
+and at each fix-loop start — the box never charges human pause time),
+`time_box_hours`, `attempts {task: n}`, `parked []`,
+`verdicts {task: {verdict, reason}}`, `failure_notes {task: note}`, `cycle`,
+`continue`, `exit_reason`. Budget/time exhaustion **parks all remaining open
+tasks** (with notes), so STOP #2's accept path always routes through
+reconcile-contract when work is left (gap D guard).
 
 **`review/findings.json` schema:** `{status: clean|findings|parked,
 open: [{id, severity, file, summary}], cycle}`.

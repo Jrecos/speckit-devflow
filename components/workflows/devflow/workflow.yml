@@ -1,0 +1,236 @@
+schema_version: "1.0"
+workflow:
+  id: "devflow"
+  name: "DevFlow Pipeline"
+  version: "0.1.0"
+  author: "Jrecos"
+  description: "Frame -> Plan -> Analyze -> STOP#1 -> build loop -> Review (loopback x2, unrolled) -> Verify -> STOP#2 -> reconcile -> Ship -> Capture"
+
+requires:
+  speckit_version: ">=0.12.0"
+  integrations:
+    any: ["claude"]
+
+inputs:
+  feature:
+    type: string
+    required: true
+    prompt: "Describe the feature to build"
+  mode:
+    type: string
+    default: "attended"
+    enum: ["attended", "attended-step", "autonomous"]
+    prompt: "Loop mode (attended | attended-step | autonomous)"
+  integration:
+    type: string
+    default: "auto"
+    prompt: "Integration ('auto' uses the project's initialized integration; DevFlow targets claude)"
+
+# Integration wiring is load-bearing: without a per-step integration the engine's
+# default_integration is None and every command step fails dispatch (verified).
+steps:
+  # ---------- Frame ----------
+  - id: specify
+    command: speckit.specify
+    integration: "{{ inputs.integration }}"
+    input: { args: "{{ inputs.feature }}" }
+  - id: brainstorm
+    command: speckit.superspec.brainstorm
+    integration: "{{ inputs.integration }}"
+    input: { args: "pressure-test the spec for edge cases and contradictions" }
+  - id: clarify
+    command: speckit.clarify
+    integration: "{{ inputs.integration }}"
+    continue_on_error: true          # clarify is optional-by-outcome
+    input: { args: "" }
+
+  # ---------- Plan ----------
+  - id: plan
+    command: speckit.plan
+    integration: "{{ inputs.integration }}"
+    input: { args: "" }
+  - id: tasks
+    command: speckit.tasks
+    integration: "{{ inputs.integration }}"
+    input: { args: "" }
+
+  # ---------- Loop state + leash (feature.json exists only after specify ran) ----------
+  - id: init-loop
+    type: shell
+    run: bash .specify/extensions/devflow/scripts/bash/devflow-init.sh {{ inputs.mode }}
+  - id: compute-leash
+    type: shell
+    run: bash .specify/extensions/devflow/scripts/bash/devflow-compute-leash.sh
+
+  # ---------- Analyze + STOP #1 ----------
+  - id: analyze
+    command: speckit.analyze
+    integration: "{{ inputs.integration }}"
+    input: { args: "" }
+  - id: stop1
+    type: gate
+    message: "STOP #1 - review the plan, the failing acceptance tests, and the leash below. Approving hands the loop the keys until STOP #2."
+    show_file: ".specify/devflow/leash.md"
+    options: [approve, reject]
+    on_reject: abort
+
+  # ---------- Build loop ----------
+  - id: build-loop
+    type: do-while
+    max_iterations: 50
+    condition: "{{ steps.loop-status.output.data.continue }}"
+    steps:
+      - id: iterate
+        command: speckit.devflow.iterate
+        integration: "{{ inputs.integration }}"
+        continue_on_error: true       # a red iteration must not fail the pipeline
+        input: { args: "" }
+      - id: loop-status
+        type: shell
+        output_format: json
+        run: bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh
+
+  # ---------- Review (cycle 0) ----------
+  - id: review
+    command: speckit.devflow.review
+    integration: "{{ inputs.integration }}"
+    input: { args: "" }
+
+  # ---------- Loopback cycle 1 (unrolled; workflows have no backward edges) ----------
+  - id: findings-check-1
+    type: shell
+    output_format: json
+    run: python3 -c "import json;d=json.load(open('.specify/feature.json'));f=json.load(open(d['feature_directory']+'/review/findings.json'));print(json.dumps({'status':f['status']}))"
+  - id: fix-cycle-1
+    type: if
+    condition: "{{ steps.findings-check-1.output.data.status == 'findings' }}"
+    then:
+      - id: convert-1
+        type: shell
+        run: bash .specify/extensions/devflow/scripts/bash/devflow-convert-findings.sh 1
+      - id: fix-loop-1
+        type: do-while
+        max_iterations: 25
+        condition: "{{ steps.loop-status-f1.output.data.continue }}"
+        steps:
+          - id: iterate-f1
+            command: speckit.devflow.iterate
+            integration: "{{ inputs.integration }}"
+            continue_on_error: true
+            input: { args: "" }
+          - id: loop-status-f1
+            type: shell
+            output_format: json
+            run: bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh
+      - id: re-review-1
+        command: speckit.devflow.review
+        integration: "{{ inputs.integration }}"
+        input: { args: "full re-review, cycle 1" }
+
+  # ---------- Loopback cycle 2 (final; cap = review.cycles) ----------
+  - id: findings-check-2
+    type: shell
+    output_format: json
+    run: python3 -c "import json;d=json.load(open('.specify/feature.json'));f=json.load(open(d['feature_directory']+'/review/findings.json'));print(json.dumps({'status':f['status']}))"
+  - id: fix-cycle-2
+    type: if
+    condition: "{{ steps.findings-check-2.output.data.status == 'findings' }}"
+    then:
+      - id: convert-2
+        type: shell
+        run: bash .specify/extensions/devflow/scripts/bash/devflow-convert-findings.sh 2
+      - id: fix-loop-2
+        type: do-while
+        max_iterations: 25
+        condition: "{{ steps.loop-status-f2.output.data.continue }}"
+        steps:
+          - id: iterate-f2
+            command: speckit.devflow.iterate
+            integration: "{{ inputs.integration }}"
+            continue_on_error: true
+            input: { args: "" }
+          - id: loop-status-f2
+            type: shell
+            output_format: json
+            run: bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh
+      - id: re-review-2
+        command: speckit.devflow.review
+        integration: "{{ inputs.integration }}"
+        input: { args: "full re-review, cycle 2 (final)" }
+      # cap spent: surviving findings are parked with history (ADR-0012)
+      - id: park-findings
+        type: shell
+        run: >-
+          python3 -c "import json;d=json.load(open('.specify/feature.json'));p=d['feature_directory']+'/review/findings.json';f=json.load(open(p));
+          f['status']='parked' if f['status']=='findings' else f['status'];json.dump(f,open(p,'w'),indent=2);print(f['status'])"
+
+  # ---------- Verify (gap-B prerequisite, then the phase) ----------
+  - id: verify-prereq
+    type: shell
+    run: bash .specify/extensions/devflow/scripts/bash/devflow-check-review.sh
+  - id: verify
+    command: speckit.devflow.verify
+    integration: "{{ inputs.integration }}"
+    input: { args: "" }
+
+  # ---------- STOP #2 + routing ----------
+  - id: stop2-prep
+    type: shell
+    run: bash .specify/extensions/devflow/scripts/bash/devflow-stop2-prep.sh
+  - id: stop2
+    type: gate
+    message: "STOP #2 - the evidence is below. Ship happens only past this gate. Accepting with parked items routes through reconcile-contract."
+    show_file: ".specify/devflow/stop2.md"
+    options: [accept, accept-with-deviation, reject]
+    on_reject: abort
+  - id: route-stop2
+    type: switch
+    expression: "{{ steps.stop2.output.choice }}"
+    cases:
+      accept:
+        # plain accept still reconciles when anything is parked (ADR-0016)
+        - id: reconcile-if-parked
+          type: shell
+          output_format: json
+          run: >-
+            python3 -c "import json;d=json.load(open('.specify/feature.json'));s=json.load(open(d['feature_directory']+'/loop/state.json'));
+            f=json.load(open(d['feature_directory']+'/review/findings.json'));
+            print(json.dumps({'needs': bool(s['parked']) or f['status']=='parked'}))"
+        - id: reconcile-parked
+          type: if
+          condition: "{{ steps.reconcile-if-parked.output.data.needs }}"
+          then:
+            - id: reconcile-a
+              command: speckit.devflow.reconcile-contract
+              integration: "{{ inputs.integration }}"
+              input: { args: "descope: document parked tasks/findings in the contract" }
+        - id: ship-a
+          command: speckit.git.validate
+          integration: "{{ inputs.integration }}"
+          input: { args: "" }
+        - id: ship-commit-a
+          command: speckit.git.commit
+          integration: "{{ inputs.integration }}"
+          input: { args: "" }
+        - id: capture-a
+          command: speckit.devflow.capture
+          integration: "{{ inputs.integration }}"
+          input: { args: "" }
+      accept-with-deviation:
+        - id: reconcile-b
+          command: speckit.devflow.reconcile-contract
+          integration: "{{ inputs.integration }}"
+          input: { args: "accepted deviation: update contract text + ADR" }
+        - id: ship-b
+          command: speckit.git.validate
+          integration: "{{ inputs.integration }}"
+          input: { args: "" }
+        - id: ship-commit-b
+          command: speckit.git.commit
+          integration: "{{ inputs.integration }}"
+          input: { args: "" }
+        - id: capture-b
+          command: speckit.devflow.capture
+          integration: "{{ inputs.integration }}"
+          input: { args: "" }
+    default: []   # unreachable: reject aborts at the gate

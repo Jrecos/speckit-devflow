@@ -1,33 +1,48 @@
 ---
-description: "Review phase: local code review + Semgrep + security review; write findings.md and machine-readable findings.json FIRST"
+description: "DevFlow Review phase: local code review + Semgrep scan + security review over the whole feature diff; writes findings.md and machine-readable findings.json BEFORE anything reacts. Use when the build loop has exhausted and the pipeline reaches Review, or for a full re-review after a fix cycle. Keywords: review, code review, security, semgrep, findings, re-review."
 ---
 
 # DevFlow Review — the unskippable gate (its own phase, never a loop iteration)
 
-Local-only review of the whole feature diff. Your FIRST act after analysis is
-writing the findings artifacts — findings exist on disk before anything reacts.
+## Standing rules
+
+- You **find**; the loop **fixes** (ADR-0012). Do not fix anything in this session.
+- Both artifacts are written **before any reaction** — findings exist on disk first.
+- A re-review runs the FULL gate — never a lighter pass because "only F1 changed".
 
 ## Steps
 
-1. Read `.specify/feature.json` → `feature_directory` (`<fdir>`). Determine the
-   feature diff: `git log --oneline` since the feature's first commit; `git diff`
-   against the pre-feature base.
-2. Run three review passes over the diff:
-   - **Code quality:** correctness, error handling, edge cases, test honesty
-     (do tests assert behavior or just pass vacuously?).
-   - **Semgrep:** use the semgrep MCP tools to scan the changed files
-     (dataflow/taint analysis an LLM review can miss).
-   - **Security:** injection, authz/authn holes, secrets in code, unsafe
-     deserialization, path traversal — on the changed surface.
-3. **Write both artifacts BEFORE any reaction:**
+1. **Scope the diff** (REQUIRED): read `.specify/feature.json` → `feature_directory`
+   (`<fdir>`). Find the feature's base (`git log --oneline` to its first commit);
+   take `git diff <base>..HEAD` as the review surface.
+2. **Three passes** over that surface:
+   - **Code quality** (judgment): correctness, error handling, edge cases, test
+     honesty — do the tests assert behavior or pass vacuously?
+   - **Semgrep** (mechanical): scan the changed files with the semgrep MCP tools —
+     dataflow/taint analysis an LLM read can miss. *If the semgrep MCP is not
+     available:* STOP and report — run `/speckit-devflow-onboard` to install it;
+     do not substitute your own reading and call it a scan.
+   - **Security** (judgment): injection, authz/authn holes, secrets in code, unsafe
+     deserialization, path traversal — on the changed surface only.
+3. **Write both artifacts** (REQUIRED, before anything else happens):
    - `<fdir>/review/findings.md` — human-readable: one section per finding with
      severity, file, explanation, suggested fix.
-   - `<fdir>/review/findings.json` — machine-readable, exactly this schema:
+   - `<fdir>/review/findings.json` — exactly this schema:
      `{"status": "clean" | "findings", "open": [{"id": "F1", "severity": "high|medium|low", "file": "<path>", "summary": "<one line>"}], "cycle": <state.cycle>}`
-   - `status` is `clean` when `open` is empty, else `findings`. Number findings
-     F1, F2, … continuing across cycles (read the previous findings.json if any).
-4. On a re-review (the workflow passes "re-review" in your arguments): run the FULL
-   gate again — never a lighter pass. Mark resolved findings in findings.md
-   (strike-through with a `resolved by <decision-record>` note) and remove them
-   from `open` in findings.json.
-5. Do not fix anything yourself. Review finds; the loop fixes (ADR-0012).
+     `status` is `clean` iff `open` is empty. Number findings F1, F2, …
+     **continuing across cycles** (read the previous findings.json first).
+4. **Re-review only:** mark resolved findings in findings.md (strike-through +
+   `resolved by <decision-record>`) and remove them from `open` in findings.json.
+
+## Done when
+
+Both files exist and agree: `findings.json` parses, its `status` matches whether
+`open` is empty, and every open finding has id/severity/file/summary. Verify by
+running: `python3 -c "import json,sys;f=json.load(open('<fdir>/review/findings.json'));assert (f['status']=='clean')==(not f['open']);print('findings artifact OK')"`
+— if it fails, fix the JSON before ending.
+
+## Handoff
+
+The workflow (or orchestrator) reads `findings.json`: `clean` → Verify;
+`findings` → convert-findings + a fix cycle. You do not trigger either — end after
+the artifacts are verified.

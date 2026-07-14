@@ -1,5 +1,5 @@
 ---
-description: "Write the ADR-lite decision record for the current DevFlow iteration into docs/decisions/ and point loop state at it; links the finding it resolves in fix-task iterations. Use at every GREEN close inside iterate — the Stop gate blocks the close without it. Keywords: record decision, ADR, decision record, iteration exit, document choice."
+description: "Writes the ADR-lite decision record for the current DevFlow iteration into docs/decisions/ and points loop state at it; links the finding it resolves in fix-task iterations. Use at every GREEN close inside iterate — the Stop gate blocks the close without it. Keywords: record decision, ADR, decision record, iteration exit, document choice."
 ---
 
 # DevFlow Record Decision

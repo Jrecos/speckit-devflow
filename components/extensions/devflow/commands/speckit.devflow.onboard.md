@@ -1,5 +1,5 @@
 ---
-description: "Validate and install every DevFlow prerequisite at project scope: tool checks, semgrep MCP, project lint/typecheck/test commands into config, judge seam smoke-test, hooks pack, checker subagent, CLAUDE.md protocol, gitignore hygiene. Use once per project after bundle install, or re-run anytime to re-validate — it is idempotent. Keywords: onboard, setup, install hooks, prerequisites, configure devflow, workflow-ready."
+description: "Validates and installs every DevFlow prerequisite at project scope: tool checks, semgrep MCP, project lint/typecheck/test commands into config, judge seam smoke-test, hooks pack, checker subagent, CLAUDE.md protocol, gitignore hygiene. Use once per project after bundle install, or re-run anytime to re-validate — it is idempotent. Keywords: onboard, setup, install hooks, prerequisites, configure devflow, workflow-ready."
 ---
 
 # DevFlow Onboard — make this project workflow-ready

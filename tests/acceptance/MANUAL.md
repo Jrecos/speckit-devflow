@@ -55,6 +55,16 @@ re-runs the loop body — iterate picks the NEXT task from disk state, so each
 resume advances exactly one iteration (state-idempotency makes the re-run safe).
 Choosing `reject` aborts the run.
 
+## 6b. disable-model-invocation dispatch check (ADR-0022 deferred lever)
+
+Before flipping `disable-model-invocation: true` on the worker commands (iterate/review/
+verify/record-decision/reconcile-contract/capture), verify the dispatch still works:
+add the flag to `speckit.devflow.iterate.md`'s frontmatter, reinstall, then run
+`claude -p "/speckit-devflow-iterate"` from a primed feature.
+**Expect:** the iteration still runs (explicit `/name` invocation is unaffected by the
+flag). If it does NOT dispatch, remove the flag — the assumption is wrong. If it does,
+apply the flag to all six worker commands and re-run the full pipeline once to confirm.
+
 ## 6. --bare guard
 
 Inspect the dispatch invocation during any workflow run (`ps` or verbose output).

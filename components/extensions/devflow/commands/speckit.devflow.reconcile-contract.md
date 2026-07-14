@@ -1,5 +1,5 @@
 ---
-description: "Reconcile the spec contract after STOP #2: edit spec.md to describe actual shipped behavior (accepted deviations, descoped/parked items) and write an ADR — both before Ship can run. Use when the human chose accept-with-deviation, or accept while parked tasks/findings exist. Keywords: reconcile, deviation, descope, spec edit, contract, stale spec."
+description: "Reconciles the spec contract after DevFlow STOP #2: edits spec.md to describe actual shipped behavior (accepted deviations, descoped/parked items) and writes an ADR — both before Ship can run. Use when the human chose accept-with-deviation, or accept while parked tasks/findings exist. Keywords: reconcile, deviation, descope, spec edit, contract, stale spec."
 ---
 
 # DevFlow Reconcile Contract — accepting a deviation IS a spec edit

@@ -1,5 +1,5 @@
 ---
-description: "DevFlow Review phase: local code review + Semgrep scan + security review over the whole feature diff; writes findings.md and machine-readable findings.json BEFORE anything reacts. Use when the build loop has exhausted and the pipeline reaches Review, or for a full re-review after a fix cycle. Keywords: review, code review, security, semgrep, findings, re-review."
+description: "Runs the DevFlow Review phase — local code review + Semgrep scan + security review over the whole feature diff; writes findings.md and machine-readable findings.json BEFORE anything reacts. Use when the build loop has exhausted and the pipeline reaches Review, or for a full re-review after a fix cycle. Keywords: review, code review, security, semgrep, findings, re-review."
 ---
 
 # DevFlow Review — the unskippable gate (its own phase, never a loop iteration)

@@ -1,5 +1,5 @@
 ---
-description: "DevFlow Verify phase: full test suite plus a judge verdict over the WHOLE feature diff; writes verify-report.md with deviations from spec noted. Runs only after Review's findings are clean or parked (hard prerequisite). Use when the pipeline reaches Verify, before STOP #2. Keywords: verify, full suite, whole-diff judge, verify report, deviations, acceptance tests."
+description: "Runs the DevFlow Verify phase — full test suite plus a judge verdict over the WHOLE feature diff; writes verify-report.md with deviations from spec noted. Runs only after Review's findings are clean or parked (hard prerequisite). Use when the pipeline reaches Verify, before STOP #2. Keywords: verify, full suite, whole-diff judge, verify report, deviations, acceptance tests."
 ---
 
 # DevFlow Verify — full suite + whole-diff judge

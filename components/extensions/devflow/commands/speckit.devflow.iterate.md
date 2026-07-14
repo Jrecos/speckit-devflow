@@ -1,5 +1,5 @@
 ---
-description: "Run exactly ONE DevFlow build-loop iteration: pick one task from tasks.md, implement it, pass scoped tests, checker and judge verdicts, then close GREEN or RED under the Stop-gate contract. Use when the devflow workflow or orchestrator dispatches an iteration; also for manually advancing the loop one task. Keywords: iterate, iteration, build loop, one task, maker."
+description: "Runs exactly ONE DevFlow build-loop iteration: picks one task from tasks.md, implements it, passes scoped tests, checker and judge verdicts, then closes GREEN or RED under the Stop-gate contract. Use when the devflow workflow or orchestrator dispatches an iteration; also to manually advance the loop one task. Keywords: iterate, iteration, build loop, one task, maker."
 ---
 
 # DevFlow Iterate — one task, one fresh context

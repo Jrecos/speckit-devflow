@@ -1,5 +1,5 @@
 ---
-description: "DevFlow Capture phase: scan the feature's committed decision records and propose durable knowledge notes for human curation — reads the repo, never the chat. Use after Ship as the pipeline's final phase, or standalone to harvest a finished feature. Keywords: capture, knowledge, vault notes, harvest decisions, curate."
+description: "Scans the feature's committed decision records and proposes durable knowledge notes for human curation — reads the repo, never the chat. Use after Ship as the DevFlow pipeline's final Capture phase, or standalone to harvest a finished feature. Keywords: capture, knowledge, vault notes, harvest decisions, curate."
 ---
 
 # DevFlow Capture — feed the knowledge track

@@ -1,5 +1,6 @@
 ---
-description: "Drive the complete DevFlow pipeline from inside Claude Code — frame, plan, leash, analyze, STOP #1, build loop, review, fix cycles, verify, STOP #2, reconcile, ship, capture — tracked in a guarded flow ledger with in-conversation gates. Use to start a new feature end-to-end or to resume one mid-pipeline. Keywords: start, run devflow, new feature, pipeline, orchestrate, resume, continue feature."
+description: "Drives the complete DevFlow pipeline from inside Claude Code — frame, plan, leash, analyze, STOP #1, build loop, review, fix cycles, verify, STOP #2, reconcile, ship, capture — tracked in a guarded flow ledger with in-conversation gates. Use to start a new feature end-to-end or to resume one mid-pipeline. Keywords: start, run devflow, new feature, pipeline, orchestrate, resume, continue feature."
+argument-hint: "<feature description> (or empty to resume)"
 ---
 
 # DevFlow Start — the whole pipeline, from this session

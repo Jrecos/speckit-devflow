@@ -1,5 +1,5 @@
 ---
-description: "Render a compact, budget-aware view of the DevFlow loop state — iteration, budget, clock, parked tasks, verdicts — plus one mechanically-chosen next action. Use anytime to check where a feature stands, especially before resuming. Keywords: status, progress, where are we, loop state, budget, parked, resume."
+description: "Renders a compact, budget-aware view of the DevFlow loop state — iteration, budget, clock, parked tasks, verdicts — plus one mechanically-chosen next action. Use anytime to check where a feature stands, especially before resuming. Keywords: status, progress, where are we, loop state, budget, parked, resume."
 ---
 
 # DevFlow Status

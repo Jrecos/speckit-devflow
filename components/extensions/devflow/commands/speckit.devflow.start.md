@@ -7,11 +7,14 @@ argument-hint: "<feature description> (or empty to resume)"
 
 ## Standing rules (apply to this ENTIRE session)
 
-- **The ledger is law.** Every phase transition goes through
-  `bash .specify/extensions/devflow/scripts/bash/devflow-flow.sh` (below: `FLOW`).
-  It refuses out-of-order phases and phases whose exit artifacts don't exist.
-  If it blocks: the fix is doing the work. NEVER edit `devflow-flow.json` by hand,
-  and NEVER mark a phase done to "move things along".
+- **The ledger is law.** Every phase transition goes through the flow guard. This doc
+  abbreviates it as `FLOW …`, which is shorthand for the **literal path**
+  `bash .specify/extensions/devflow/scripts/bash/devflow-flow.sh …` — write that full
+  path in each command. It is NOT a shell variable: do not `FLOW=…` then run `$FLOW`
+  (a variable won't survive between separate tool-call shells, and zsh won't word-split
+  it). The guard refuses out-of-order phases and phases whose exit artifacts don't exist.
+  If it blocks: the fix is doing the work. NEVER hand-edit `devflow-flow.json`, and NEVER
+  mark a phase done to "move things along".
 - **You never do build work in this session.** Iterations dispatch as fresh
   `claude -p` sessions; you schedule and read state.
 - **Human gates are conversations.** Render the evidence, ask, wait for their

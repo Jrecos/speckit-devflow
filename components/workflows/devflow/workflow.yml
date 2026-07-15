@@ -2,7 +2,7 @@ schema_version: "1.0"
 workflow:
   id: "devflow"
   name: "DevFlow Pipeline"
-  version: "0.1.1"
+  version: "0.1.2"
   author: "Jrecos"
   description: "Frame -> Plan -> Analyze -> STOP#1 -> build loop -> Review (loopback x2, unrolled) -> Verify -> STOP#2 -> reconcile -> Ship -> Capture"
 

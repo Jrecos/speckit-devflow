@@ -1,0 +1,43 @@
+name: Release
+
+# Builds the 3 release assets and publishes/updates the GitHub release for a pushed v* tag.
+# Safety net: `scripts/release.sh` already pushes the tag AND creates the release itself as
+# part of a normal release run, so this workflow's `gh release create` will usually find the
+# release already exists — in that case it uploads the assets with --clobber instead of
+# failing, so this stays correct whether release.sh cut the tag or someone tagged by hand.
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build release assets
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          ( cd components/extensions && zip -rq ../../dist/devflow-extension.zip devflow -x '*.DS_Store' )
+          ( cd components/presets && zip -rq ../../dist/devflow-plan-hardening.zip devflow-plan-hardening -x '*.DS_Store' )
+          cp components/workflows/devflow/workflow.yml dist/devflow-workflow.yml
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          assets=(dist/devflow-extension.zip dist/devflow-plan-hardening.zip dist/devflow-workflow.yml)
+          if gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "release ${{ github.ref_name }} already exists — uploading assets (--clobber)"
+            gh release upload "${{ github.ref_name }}" "${assets[@]}" --repo "${{ github.repository }}" --clobber
+          else
+            gh release create "${{ github.ref_name }}" "${assets[@]}" \
+              --repo "${{ github.repository }}" \
+              --title "${{ github.ref_name }}" \
+              --notes "DevFlow bundle release ${{ github.ref_name }}. See docs/releasing.md."
+          fi

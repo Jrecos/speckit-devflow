@@ -1,0 +1,44 @@
+name: CI
+
+# Validates the bundle on every push/PR to main: schema-valid manifests, and the full
+# acceptance suite (real specify CLI installs into a scratch project, real bundle build,
+# leak scan). Does not build or publish release assets — see release.yml for that.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      # NOTE: specify-cli is not published to PyPI — it installs straight from the
+      # upstream GitHub Spec Kit repo. Pinned to the same tag this bundle was developed
+      # against; bump the rev if bundle.yml's requires.speckit_version floor moves, or
+      # switch to an unpinned `git+https://github.com/github/spec-kit.git` if you'd
+      # rather always track upstream HEAD (verified locally via `uv tool list` +
+      # `uv-receipt.toml` — tune this line if upstream's install story changes).
+      - name: Install specify CLI
+        run: uv tool install "specify-cli @ git+https://github.com/github/spec-kit.git@v0.12.11"
+
+      - name: Install semgrep
+        run: uv tool install semgrep
+
+      - name: Put uv tool installs on PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: specify bundle validate (offline structural check)
+        # NOT `specify bundle validate --path bundle` bare — that always fails outside a
+        # project with the components actually registered (see docs/releasing.md). This
+        # offline check still catches a broken/malformed manifest immediately; the real
+        # reference-resolution validate happens for real in the acceptance suite next.
+        run: specify bundle validate --path bundle --offline
+
+      - name: Acceptance suite (15 tests)
+        run: bash tests/acceptance/run-all.sh

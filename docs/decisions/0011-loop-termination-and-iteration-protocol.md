@@ -45,8 +45,8 @@ iterations used, X/Y tasks done" for the human to extend, re-plan, or accept par
 - Judge/checker verdicts and failure notes are **written to loop state**, so retry
   iterations (fresh context) read and target them.
 
-All defaults live in `devflow-config.yml`: `iteration_factor: 2.5`, `retry_cap: 2`,
-`time_box: 4h`. STOP #1 shows the computed values per run.
+All defaults live in `devflow-config.yml`: `iteration_factor: 2.5`, `max_attempts_per_task: 2`,
+`time_box_hours: 4`. STOP #1 shows the computed values per run.
 
 **Consequences:** Cost control scales with the work instead of strangling large features or
 over-leashing small ones; no magic constants hidden from the human; the parked-task

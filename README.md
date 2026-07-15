@@ -219,7 +219,7 @@ specify workflow add components/workflows/devflow/workflow.yml
 specify bundle validate --path bundle     # ✓
 specify bundle build --path bundle --output dist   # → devflow-0.1.0.zip
 
-bash tests/acceptance/run-all.sh          # 12 automated tests
+bash tests/acceptance/run-all.sh          # 14 automated tests
 # + tests/acceptance/MANUAL.md            # 6 live-Claude checks
 ```
 
@@ -240,20 +240,20 @@ The reason this exists ([full retro](docs/retro.md)):
 ```
 bundle/bundle.yml                 the manifest (validate/build against real spec-kit 0.12+)
 components/
-  extensions/devflow/             8 commands · Stop-gate + PostToolUse hook scripts ·
+  extensions/devflow/             9 commands · Stop-gate + PostToolUse hook scripts ·
                                   loop scripts (init/leash/status/convert/check) ·
                                   judge seam · checker subagent · CLAUDE.md protocol · config
   presets/devflow-plan-hardening/ plan/tasks templates: red acceptance tests required,
                                   countable task format with per-task acceptance criteria
   workflows/devflow/              the pipeline: gates, loops (unrolled review cycles ×2),
                                   switch routing, clean-park semantics
-tests/acceptance/                 12 automated tests + MANUAL.md (live-Claude checklist)
+tests/acceptance/                 14 automated tests + MANUAL.md (live-Claude checklist)
 docs/
-  decisions/                      ADRs 0001–0017 — every design decision, including the
+  decisions/                      ADRs 0001–0022 — every design decision, including the
                                   three-agent verification pass that corrected the design
   superpowers/specs/              the approved design spec
   research/                       the cited loop-architecture research this is built on
-  blueprint.md · retro.md · baseline-workflow.md
+  development-workflow.md · blueprint.md · retro.md · baseline-workflow.md
 ```
 
 ## Evidence-based, verified twice
@@ -268,9 +268,9 @@ the spec and found what tests couldn't; all findings fixed.
 
 ## Status
 
-- [x] Research → blueprint → 16 ADRs → approved spec
+- [x] Research → blueprint → 22 ADRs → approved spec
 - [x] Components authored (extension · workflow · preset) + final `bundle.yml`
-- [x] `specify bundle validate` ✓ · `build` ✓ · **12/12 automated acceptance tests**
+- [x] `specify bundle validate` ✓ · `build` ✓ · **14/14 automated acceptance tests**
 - [ ] Live-Claude dogfood run ([`tests/acceptance/MANUAL.md`](tests/acceptance/MANUAL.md))
 - [ ] Catalog publication
 

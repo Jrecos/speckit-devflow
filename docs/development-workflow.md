@@ -30,7 +30,7 @@ Then, inside `claude`:
 | # | Step | Command | Notes |
 |---|---|---|---|
 | 1.1 👤▸ | **Constitution** — the project's non-negotiables | `/speckit-constitution` | quality bars, stack rules, review standards → `.specify/memory/constitution.md`. Every later phase checks against it. |
-| 1.2 👤 | *(optional)* **Product layer** | `aide` extension: vision → roadmap → items | only for products that need a layer above features: `specify extension add aide`, then `/speckit.aide.create-vision` → `create-roadmap` → `create-item`. Skip for libraries/tools. ([ADR-0006](decisions/0006-component-strategy-hybrid.md)) |
+| 1.2 👤 | *(optional)* **Product layer** | `aide` extension: vision → roadmap → items | only for products that need a layer above features: `specify extension add aide`, then `/speckit-aide-create-vision` → `/speckit-aide-create-roadmap` → `/speckit-aide-create-item`. Skip for libraries/tools. ([ADR-0006](decisions/0006-component-strategy-hybrid.md)) |
 | 1.3 👤▸ | **Onboard** — make the repo workflow-ready | `/speckit-devflow-onboard` | validates git/claude, adds semgrep MCP, detects & confirms your lint/typecheck/test commands, smoke-tests the judge (warns on same-family), installs the hooks pack + checker subagent + CLAUDE.md protocol, fixes `.gitignore` ([ADR-0017](decisions/0017-artifact-versioning-policy.md)). Ends with a ✓/✗ checklist. |
 
 ### The judge: one line of env

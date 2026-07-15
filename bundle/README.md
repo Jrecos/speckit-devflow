@@ -55,5 +55,5 @@ Spec Kit, MADR, and Anthropic guidance):
 
 `/speckit-devflow-onboard` adds the gitignore entries for you.
 
-Design record: `../docs/decisions/` (ADRs 0001–0017) and
+Design record: `../docs/decisions/` (ADRs 0001–0022) and
 `../docs/superpowers/specs/2026-07-13-devflow-bundle-design.md`.

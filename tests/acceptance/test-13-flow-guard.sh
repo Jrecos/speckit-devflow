@@ -43,8 +43,11 @@ bash "$FLOW" start analyze >/dev/null && bash "$FLOW" complete analyze >/dev/nul
 bash "$FLOW" start stop1 >/dev/null
 set +e; bash "$FLOW" complete stop1 2>/dev/null; rc=$?; set -e
 [ "$rc" -ne 0 ] || fail "stop1 must require --decision"
+# clock re-stamp on approve: set a stale started_at, approve, assert it advanced (path-B/A parity)
+python3 .specify/extensions/devflow/scripts/python/devflow_state.py set specs/012-demo/loop/state.json started_at '"2020-01-01T00:00:00+00:00"'
 bash "$FLOW" complete stop1 --decision approve >/dev/null || fail "stop1 approve should record"
 python3 -c 'import json;f=json.load(open("'"$LEDGER"'"));assert f["phases"]["stop1"]["decision"]=="approve", f["phases"]["stop1"]'
+python3 -c 'import json;s=json.load(open("specs/012-demo/loop/state.json"));assert not s["started_at"].startswith("2020"), ("clock not re-stamped after approval:",s["started_at"])' || fail "stop1 approve must re-stamp the time-box clock"
 
 # build can't complete while the loop says continue=true
 bash "$FLOW" start build >/dev/null
@@ -53,13 +56,16 @@ set +e; bash "$FLOW" complete build 2>/dev/null; rc=$?; set -e
 python3 .specify/extensions/devflow/scripts/python/devflow_state.py set specs/012-demo/loop/state.json continue false
 bash "$FLOW" complete build >/dev/null || fail "build should complete once loop exhausted"
 
-# review + skippable fix cycles + verify prerequisite chain
+# review + fix cycles: fix-cycle-2 is the cap and parks surviving findings itself
 bash "$FLOW" start review >/dev/null
-echo '{"status":"clean","open":[],"cycle":0}' > specs/012-demo/review/findings.json
-echo "# findings: none" > specs/012-demo/review/findings.md
+echo '{"status":"findings","open":[{"id":"F1","severity":"high","file":"x.ts","summary":"leftover"}],"cycle":0}' > specs/012-demo/review/findings.json
+echo "# findings: F1" > specs/012-demo/review/findings.md
 bash "$FLOW" complete review >/dev/null
-bash "$FLOW" complete fix-cycle-1 --skip >/dev/null || fail "clean findings: fix cycle should skip"
-bash "$FLOW" complete fix-cycle-2 --skip >/dev/null
+# cycle 1 completes even with findings still open (they flow to cycle 2)
+bash "$FLOW" start fix-cycle-1 >/dev/null && bash "$FLOW" complete fix-cycle-1 >/dev/null || fail "fix-cycle-1 should complete; survivors flow to cycle 2"
+# cycle 2 is the cap: completing it PARKS surviving findings (findings -> parked)
+bash "$FLOW" start fix-cycle-2 >/dev/null && bash "$FLOW" complete fix-cycle-2 >/dev/null || fail "fix-cycle-2 should complete (cap)"
+[ "$(python3 -c 'import json;print(json.load(open("specs/012-demo/review/findings.json"))["status"])')" = "parked" ] || fail "fix-cycle-2 must park surviving findings"
 bash "$FLOW" start verify >/dev/null
 set +e; bash "$FLOW" complete verify 2>/dev/null; rc=$?; set -e
 [ "$rc" -ne 0 ] || fail "verify must not complete without verify-report.md"

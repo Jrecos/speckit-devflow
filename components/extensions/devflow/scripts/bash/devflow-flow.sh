@@ -70,11 +70,19 @@ def v_build():
 def v_review():
     if not exists("review/findings.json"): return "review needs review/findings.json"
     if not exists("review/findings.md"): return "review needs review/findings.md"
-def v_fix(n):
-    def _v():
-        fj = json.load(open(os.path.join(fdir, "review/findings.json")))
-        if fj["status"] == "findings": return f"fix-cycle-{n}: findings still open — convert, loop, re-review (or park at cycle cap)"
-    return _v
+def v_fix1():
+    # Cycle 1 is not the cap: remaining findings after its re-review legitimately flow to
+    # cycle 2, so completion is ordering-only. Verify's clean-or-parked prereq is the backstop.
+    return None
+def v_fix2():
+    # Cycle 2 IS the cap (ADR-0012): survivors are PARKED here, mirroring workflow.yml's
+    # park-findings step, so the two drivers are equivalent and Verify's prereq passes.
+    p = os.path.join(fdir, "review/findings.json")
+    fj = json.load(open(p))
+    if fj.get("status") == "findings":
+        fj["status"] = "parked"
+        json.dump(fj, open(p, "w"), indent=2)
+    return None
 def v_verify():
     r = subprocess.run(["bash", ".specify/extensions/devflow/scripts/bash/devflow-check-review.sh"],
                        capture_output=True, text=True)
@@ -94,7 +102,7 @@ def v_capture():
 
 VERIFIERS = {"frame": v_frame, "plan": v_plan, "leash": v_leash, "analyze": v_analyze,
              "build": v_build, "review": v_review,
-             "fix-cycle-1": v_fix(1), "fix-cycle-2": v_fix(2),
+             "fix-cycle-1": v_fix1, "fix-cycle-2": v_fix2,
              "verify": v_verify, "reconcile": v_reconcile, "ship": v_ship,
              "capture": v_capture}
 
@@ -152,6 +160,14 @@ if cmd == "complete":
         if not decision: die(f"'{phase}' is a human gate: pass --decision <choice> AFTER the human chose")
         if decision not in STOPS[phase]: die(f"'{phase}' decision must be one of {STOPS[phase]}")
         if decision == "reject": die(f"'{phase}' rejected — the pipeline stops here (re-plan or abandon; the ledger keeps the record)")
+        if phase == "stop1" and decision == "approve":
+            # Start the time-box clock AFTER approval, matching the engine driver's
+            # start-clock step (workflow.yml) — human deliberation must not eat the box.
+            sp = os.path.join(fdir, "loop", "state.json")
+            if os.path.exists(sp):
+                st = json.load(open(sp))
+                st["started_at"] = now()
+                json.dump(st, open(sp, "w"), indent=2)
     else:
         err = VERIFIERS[phase]()   # STOP phases have no artifact verifier: the decision IS the artifact
         if err: die(err)

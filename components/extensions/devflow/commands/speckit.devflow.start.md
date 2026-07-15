@@ -101,8 +101,11 @@ the record. Do not continue past a reject.
   `bash .specify/extensions/devflow/scripts/bash/devflow-convert-findings.sh 1` →
   dispatch the loop as in §6 (fresh budget) → `/speckit-devflow-review` again (full
   gate, never lighter) → `FLOW complete fix-cycle-1`. Still findings? Repeat as
-  cycle 2. After cycle 2, surviving findings are parked (the review command marks
-  them).
+  cycle 2 (`FLOW start fix-cycle-2` → `convert-findings.sh 2` → loop → re-review →
+  `FLOW complete fix-cycle-2`). **`FLOW complete fix-cycle-2` is the cap — it parks any
+  surviving findings itself** (sets findings.json → `parked`), so Verify's prerequisite
+  passes and STOP #2 sees the park history. You never park them by hand, and the review
+  command never sets `parked` (its status is only `clean`|`findings`).
 
 ## 8 · verify
 

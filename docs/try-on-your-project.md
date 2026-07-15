@@ -48,15 +48,18 @@ specify extension add superspec       # brainstorm/review bridge; best with obra
 
 Then DevFlow's own three components. **Two ways — pick one:**
 
-**(a) From the published release — no clone needed** (recommended for a real project):
+**(a) From the published release — no clone needed** (recommended for a real project).
+These URLs always resolve to the **newest** release, so you get fixes automatically:
 
 ```bash
-V=v0.1.0
-BASE=https://github.com/Jrecos/speckit-devflow/releases/download/$V
+BASE=https://github.com/Jrecos/speckit-devflow/releases/latest/download
 specify extension add devflow --from "$BASE/devflow-extension.zip"
 specify preset add     --from "$BASE/devflow-plan-hardening.zip"
-specify workflow add "https://raw.githubusercontent.com/Jrecos/speckit-devflow/$V/components/workflows/devflow/workflow.yml"
+specify workflow add "$BASE/devflow-workflow.yml"
 ```
+
+To pin a specific version instead, swap `latest/download` for
+`download/v0.1.1` (or any tag).
 
 **(b) From a local clone** (recommended if you'll be editing DevFlow itself). Set
 `DEVFLOW` to your clone path first — an unset variable is why

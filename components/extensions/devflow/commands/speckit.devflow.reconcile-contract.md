@@ -25,7 +25,8 @@ this session ends; Ship is topologically behind this command.
      behavior;
    - each descoped/parked item → list it under a `## Descoped in this release`
      section with one line of why.
-3. **Write the ADR** to `docs/decisions/` (next NNNN number, ADR-lite template as in
+3. **Write the ADR** to `docs/decisions/` (number from
+   `bash .specify/extensions/devflow/scripts/bash/devflow-next-adr.sh`, ADR-lite template as in
    /speckit-devflow-record-decision): title names the deviation/descope; Context =
    what was accepted at STOP #2 and why; Decision = the spec edits made; include
    `**Resolves finding:** <id>` / task ids where applicable.

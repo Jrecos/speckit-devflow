@@ -25,9 +25,17 @@ to test, shared by both drivers.
 |---|---|---|---|
 | C1 | `devflow-diff-surface.sh` | the `base_commit`-not-`merge-base` feature diff + null→first-touch fallback (finding 5) | review, verify (via C2), capture |
 | C2 | `devflow-judge-prep.sh` | assembles the judge's 3 files; the `TESTS:` oracle line is always criteria line 1 (finding 6) | iterate (`--diff working`), verify (`--diff feature`) |
+| C3 | `devflow-status.sh` | read-only state render + the 6-branch next-action ladder (the mechanical choice) | status; users/orchestrator |
+| C4 | `devflow-next-adr.sh` | the next ADR number (highest `NNNN` + 1, `0001` if none) | record-decision, reconcile-contract |
+| C5 | `devflow-open-iteration.sh` + `devflow_tasks.py` | the fixed 5-command open-iteration transition; and the ONE `- [x]`/`- [ ]` count primitive | open-iteration → iterate; the count helper → init, compute-leash, loop-status, stop-gate, stop2-prep, status |
 
 `devflow-judge.sh` stays dumb — it still just reads the three files. Judgment steps (code review,
 deviation analysis) are **not** extracted: they are not mechanizable and belong at layer 3.
+`workflow.yml` needs no rewire: it dispatches iterate/review/verify as commands that already call
+these scripts, so both drivers share one implementation. Its remaining inline `python3 -c` steps
+(clock-start, findings-status reads, park-findings, reconcile-if-parked) are engine-branching glue,
+not extracted primitives; the park-findings parallel with `devflow-flow.sh` v_fix2 is a pre-existing
+driver-parity item, a candidate for a later extraction, not part of C1–C5.
 
 **Testing doctrine shift (strictly stronger):** the guarantee moves from *grep-on-prose* to
 *grep-on-invocation* **plus** a *script-behavior test*.

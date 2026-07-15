@@ -4,13 +4,15 @@ cd "${CLAUDE_PROJECT_DIR:-.}"
 FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 python3 - "$FDIR" <<'PY'
 import json, math, re, sys
+sys.path.insert(0, ".specify/extensions/devflow/scripts/python")
+import devflow_tasks  # ADR-0023/C5
 fdir = sys.argv[1]
 cfg = open(".specify/extensions/devflow/devflow-config.yml").read()
 factor = float(re.search(r"iteration_factor:\s*([\d.]+)", cfg).group(1))
 cap = int(re.search(r"max_attempts_per_task:\s*(\d+)", cfg).group(1))
 tb = re.search(r"time_box_hours:\s*([\d.]+)", cfg).group(1)
 tasks = open(f"{fdir}/tasks.md").read()
-n = len(re.findall(r"^- \[ \]", tasks, re.M))
+n = devflow_tasks.count_open(tasks)
 total = math.ceil(n * factor)
 sp = f"{fdir}/loop/state.json"
 state = json.load(open(sp)); state["budget"] = {"used": 0, "total": total}

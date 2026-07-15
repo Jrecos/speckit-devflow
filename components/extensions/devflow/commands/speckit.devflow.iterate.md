@@ -37,15 +37,13 @@ description: "Runs exactly ONE DevFlow build-loop iteration: picks one task from
    *If `feature.json` or `state.json` is missing:* STOP and report — the workflow's
    init step has not run; do not create them yourself.
 
-2. **Open the iteration** — run exactly these (STATE_PY =
-   `.specify/extensions/devflow/scripts/python/devflow_state.py`, STATE =
-   `<fdir>/loop/state.json`):
-   - `python3 STATE_PY set STATE in_iteration true`
-   - `python3 STATE_PY bump STATE iteration`
-   - `python3 STATE_PY set STATE iteration_outcome null`
-   - `python3 STATE_PY set STATE last_record null`
-   - `python3 STATE_PY set STATE tasks_done_at_start <N>` — where `<N>` is the count
-     of lines matching `^- [x]` in `<fdir>/tasks.md` (count with python, not grep -c).
+2. **Open the iteration** — run exactly:
+   `bash .specify/extensions/devflow/scripts/bash/devflow-open-iteration.sh`
+   It sets `in_iteration`, bumps `iteration`, clears `iteration_outcome` + `last_record`, and
+   stamps `tasks_done_at_start` = the current `^- [x]` count (ADR-0023) — don't hand-run the
+   individual state commands.
+   *(Later steps abbreviate STATE_PY = `.specify/extensions/devflow/scripts/python/devflow_state.py`
+   and STATE = `<fdir>/loop/state.json`.)*
 
 3. **Pick exactly ONE task**:
    - Candidates: unchecked `- [ ]` tasks in `tasks.md`, **excluding** anything in

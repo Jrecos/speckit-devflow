@@ -51,7 +51,7 @@ fi
 # exactly one task newly checked this iteration
 DONE_AT_START=$(sget tasks_done_at_start | tr -d '"')
 # count in python: `grep -c || echo 0` emits "0\n0" on zero matches (grep prints 0 AND exits 1)
-DONE_NOW=$(python3 -c 'import re,sys;print(len(re.findall(r"^- \[x\]", open(sys.argv[1]).read(), re.M)))' "$FDIR/tasks.md" 2>/dev/null || echo 0)
+DONE_NOW=$(python3 -c 'import sys;sys.path.insert(0,".specify/extensions/devflow/scripts/python");import devflow_tasks;print(devflow_tasks.count_done(open(sys.argv[1]).read()))' "$FDIR/tasks.md" 2>/dev/null || echo 0)
 DELTA=$((DONE_NOW - DONE_AT_START))
 if [ "$DELTA" -ne 1 ]; then
   echo "DevFlow gate: expected exactly 1 task to complete this iteration, found $DELTA. One task per iteration — mark exactly one done (or mark the iteration failed)." >&2

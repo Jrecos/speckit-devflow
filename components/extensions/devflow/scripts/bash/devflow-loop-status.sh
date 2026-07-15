@@ -10,6 +10,8 @@ STATE="$FDIR/loop/state.json"
 CFG=".specify/extensions/devflow/devflow-config.yml"
 python3 - "$STATE" "$FDIR/tasks.md" "$CFG" <<'PY'
 import json, re, sys, datetime
+sys.path.insert(0, ".specify/extensions/devflow/scripts/python")
+import devflow_tasks  # ADR-0023/C5
 state_p, tasks_p, cfg_p = sys.argv[1:4]
 state = json.load(open(state_p))
 cfg = open(cfg_p).read()
@@ -26,7 +28,7 @@ if state.get("in_iteration"):
 
 # --- parking ---
 tasks_txt = open(tasks_p).read()
-open_tasks = re.findall(r"^- \[ \] (\S+)", tasks_txt, re.M)
+open_tasks = devflow_tasks.open_task_ids(tasks_txt)
 for t, n in state["attempts"].items():
     if n >= cap and t in open_tasks and t not in state["parked"]:
         state["parked"].append(t)

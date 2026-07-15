@@ -11,31 +11,14 @@ is missing, say which and what creates it — never guess at state.
 
 ## Steps
 
-1. Read `.specify/feature.json` → `feature_directory` (`<fdir>`).
-   *Missing?* Report "no active feature — start one with /speckit-devflow-start or
-   /speckit-specify" and end.
-2. Read (IF EXISTS, note which are absent): `<fdir>/loop/state.json`,
-   `<fdir>/tasks.md`, `<fdir>/devflow-flow.json`, `<fdir>/review/findings.json`,
-   `<fdir>/verify-report.md`.
-3. Render exactly this shape (fill from the files; `?` for absent data):
-
-```
-DevFlow · <feature> · mode=<mode> · entry=<entry> (cycle <cycle>)
-iteration <n> · budget <used>/<total> · clock <elapsed>h/<box>h
-tasks: <done> done · <open> open · parked: <list or none>
-last outcome: <green|failed|null> · verdicts: <task: FAIL reason, ...>
-review: <clean|findings|parked|not run> · verify: <verdict|not run>
-ledger: <FLOW next output, if devflow-flow.json exists>
-```
-
-4. **One next action**, chosen mechanically in this priority order (first match wins):
-   1. budget or clock exhausted → "STOP #2 triage (park report)"
-   2. open unparked tasks ∧ budget ∧ clock left → "continue the loop (dispatch next
-      iterate / resume the workflow)"
-   3. all tasks done ∧ no findings.json → "run Review"
-   4. findings.json status `findings` → "convert + fix cycle"
-   5. review clean/parked ∧ no verify-report.md → "run Verify"
-   6. verify-report.md exists → "STOP #2 decision"
+1. Run exactly:
+   `bash .specify/extensions/devflow/scripts/bash/devflow-status.sh`
+   It reads `.specify/feature.json` → `feature_directory`, then (each only IF it exists)
+   `<fdir>/loop/state.json`, `tasks.md`, `devflow-flow.json`, `review/findings.json`,
+   `verify-report.md`, and prints the compact state block **plus one mechanically-chosen next
+   action** — the 6-branch ladder (budget/clock exhausted → continue → Review → fix cycle →
+   Verify → STOP #2) lives IN the script (ADR-0023). It writes nothing.
+2. Present that output verbatim. If it prints `no active feature …`, relay that and end.
 
 ## Done when
 

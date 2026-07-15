@@ -7,6 +7,8 @@ FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["f
 mkdir -p "$FDIR/loop" "$FDIR/review" .specify/devflow docs/decisions
 python3 - "$FDIR" "$MODE" <<'PY'
 import json, sys, os, datetime, re, subprocess
+sys.path.insert(0, ".specify/extensions/devflow/scripts/python")
+import devflow_tasks  # ADR-0023/C5: one definition of the tasks.md count primitives
 fdir, mode = sys.argv[1], sys.argv[2]
 path = os.path.join(fdir, "loop", "state.json")
 prev = json.load(open(path)) if os.path.exists(path) else {}
@@ -22,7 +24,7 @@ if not base_commit:
         base_commit = None
 cfg = open(".specify/extensions/devflow/devflow-config.yml").read()
 tb = float(re.search(r"time_box_hours:\s*([\d.]+)", cfg).group(1))
-done = len(re.findall(r"^- \[x\]", open(os.path.join(fdir, "tasks.md")).read(), re.M)) \
+done = devflow_tasks.count_done(open(os.path.join(fdir, "tasks.md")).read()) \
        if os.path.exists(os.path.join(fdir, "tasks.md")) else 0
 state = {
   "feature": os.path.basename(fdir), "feature_dir": fdir,

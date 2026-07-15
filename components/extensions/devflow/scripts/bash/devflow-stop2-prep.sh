@@ -4,10 +4,12 @@ cd "${CLAUDE_PROJECT_DIR:-.}"
 FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 python3 - "$FDIR" <<'PY'
 import glob, json, re, sys, os
+sys.path.insert(0, ".specify/extensions/devflow/scripts/python")
+import devflow_tasks  # ADR-0023/C5
 fdir = sys.argv[1]
 state = json.load(open(f"{fdir}/loop/state.json"))
 tasks = open(f"{fdir}/tasks.md").read()
-done = len(re.findall(r"^- \[x\]", tasks, re.M)); open_t = len(re.findall(r"^- \[ \]", tasks, re.M))
+done = devflow_tasks.count_done(tasks); open_t = devflow_tasks.count_open(tasks)
 fj_p = f"{fdir}/review/findings.json"
 fstat = json.load(open(fj_p))["status"] if os.path.exists(fj_p) else "MISSING"
 verdict = "not run"

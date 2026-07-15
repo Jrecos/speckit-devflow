@@ -15,8 +15,9 @@ shapes, noticed deviations. Not mechanical facts git already captures.
 1. Read `.specify/feature.json` → `feature_directory`; read its `loop/state.json`
    (REQUIRED — if `current_task` is null you are not inside an iteration: STOP and
    report instead of writing an orphan record).
-2. Next ADR number: highest `NNNN` prefix in `docs/decisions/*.md`, plus one,
-   zero-padded to 4 digits.
+2. Next ADR number — run
+   `bash .specify/extensions/devflow/scripts/bash/devflow-next-adr.sh` (highest `NNNN` prefix
+   in `docs/decisions/*.md` + 1, zero-padded to 4 digits; `0001` if none — ADR-0023).
 3. Write `docs/decisions/<NNNN>-<kebab-slug>.md`:
 
 ```markdown

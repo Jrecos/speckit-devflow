@@ -39,12 +39,31 @@ specify init . --integration claude  # scaffolds .specify/ + .claude/ ; skip if 
 
 ## 2 · Install the prerequisites + DevFlow components
 
+First the pinned prerequisites (from the community catalog):
+
 ```bash
-# pinned prerequisites (from the community catalog)
 specify extension add git
 specify extension add superspec       # brainstorm/review bridge; best with obra/superpowers installed
+```
 
-# DevFlow's own three components, from your clone ($DEVFLOW)
+Then DevFlow's own three components. **Two ways — pick one:**
+
+**(a) From the published release — no clone needed** (recommended for a real project):
+
+```bash
+V=v0.1.0
+BASE=https://github.com/Jrecos/speckit-devflow/releases/download/$V
+specify extension add devflow --from "$BASE/devflow-extension.zip"
+specify preset add     --from "$BASE/devflow-plan-hardening.zip"
+specify workflow add "https://raw.githubusercontent.com/Jrecos/speckit-devflow/$V/components/workflows/devflow/workflow.yml"
+```
+
+**(b) From a local clone** (recommended if you'll be editing DevFlow itself). Set
+`DEVFLOW` to your clone path first — an unset variable is why
+`$DEVFLOW/components/...` resolves to `/components/...` and errors out:
+
+```bash
+export DEVFLOW=~/src/speckit-devflow            # <-- your actual clone path
 specify extension add "$DEVFLOW/components/extensions/devflow" --dev
 specify preset add   --dev "$DEVFLOW/components/presets/devflow-plan-hardening"
 specify workflow add "$DEVFLOW/components/workflows/devflow/workflow.yml"

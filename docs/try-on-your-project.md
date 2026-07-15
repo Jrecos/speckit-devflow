@@ -6,7 +6,7 @@ failure modes you'll actually hit, and a feedback template at the bottom so anyt
 goes sideways comes back as something fixable.
 
 > **Status honesty (read this first).** DevFlow v0.1's *mechanical* layer (hook scripts,
-> flow guard, brakes, state contracts) is covered by 14 automated tests. Its *prompt*
+> flow guard, brakes, state contracts) is covered by 20 automated tests. Its *prompt*
 > layer (the commands driving Claude through the phases) is validated only by real runs —
 > **this guide IS that validation.** Expect rough edges in the conversational flow; the
 > guarantees underneath (no un-reviewed ship, no un-recorded decision, no runaway loop)

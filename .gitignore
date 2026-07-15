@@ -15,3 +15,9 @@ secrets/
 .idea/
 .vscode/
 .superpowers/
+
+# Local Claude Code working state — never commit (esp. nested git worktrees)
+.claude/worktrees/
+.claude/plans/
+.claude/settings.local.json
+CLAUDE.local.md

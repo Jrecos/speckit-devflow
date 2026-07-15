@@ -118,8 +118,13 @@ eval_dispatch() {
     bash -c "$DEVFLOW_EVAL_DRIVER" _ "$prompt" "$out" "$dir"
   else
     command -v claude >/dev/null 2>&1 || { echo "eval_dispatch: no 'claude' CLI for the live driver; set DEVFLOW_EVAL_DRIVER or install claude" >&2; return 2; }
+    # The eval must run non-interactively: without this the agent's tool calls (claude mcp add,
+    # edits, bash) are gated "requires approval" and the artifact never changes — grading the
+    # BEHAVIOR then fails for a permission reason, not a prompt reason. Throwaway scratch → safe to
+    # auto-approve. Overridable via DEVFLOW_EVAL_CLAUDE_ARGS.
+    local cargs="${DEVFLOW_EVAL_CLAUDE_ARGS:---dangerously-skip-permissions}"
     # A case may drop .eval/env.sh to inject env into the session (e.g. the iterate case's
     # DEVFLOW_JUDGE_CMD judge-recorder). Source it inside the run so the agent's shells inherit it.
-    ( cd "$dir"; [ -f .eval/env.sh ] && source .eval/env.sh; claude -p "$prompt" ) >"$out" 2>&1
+    ( cd "$dir"; [ -f .eval/env.sh ] && source .eval/env.sh; claude -p $cargs "$prompt" ) >"$out" 2>&1
   fi
 }

@@ -37,6 +37,16 @@ state = {
 }
 json.dump(state, open(sys.argv[1], "w"), indent=2)
 PY
+  # a CONCRETE, trivially checker-passable task so a live iteration reliably reaches the judge
+  # and closes GREEN (a vague task risks a RED close before step 7 ever runs).
+  cat > "$dir/$EVAL_FDIR/tasks.md" <<'EOF'
+# Tasks
+- [ ] T1 add greeting file
+  - AC: a file named GREETING.txt exists at the repo root containing exactly `hello devflow`
+- [x] T0 scaffolding
+  - AC: repo builds
+EOF
+  ( cd "$dir" && git add -A && git commit -qm "eval: concrete iterate task" >/dev/null 2>&1 || true )
   # give the scoped/full test commands a trivially-green command so the loop can reach the judge
   local cfg="$dir/.specify/extensions/devflow/devflow-config.yml"
   perl -pi -e 's/^  test_scoped: ""/  test_scoped: "true"/; s/^  test_full: ""/  test_full: "true"/' "$cfg"
@@ -61,9 +71,15 @@ case_grade() { # <scratch> <transcript>
   [ -f "$crit" ] || { enote "judge was never invoked with a criteria file (iteration did not reach the judge)"; return 1; }
   local first; first="$(grep -m1 -v '^[[:space:]]*$' "$crit" || true)"
   case "$first" in
-    TESTS:*) echo "judge criteria leads with the TESTS: oracle line"; return 0 ;;
+    TESTS:*) : ;;
     *) enote "judge criteria's first line is '${first}', not a TESTS: line — finding 6 regression"; return 1 ;;
   esac
+  # GREEN close: the picked task is checked off in tasks.md (lead's spec: TESTS: line AND green)
+  if ! grep -Eq '^- \[x\].*\bT1\b' "$dir/$EVAL_FDIR/tasks.md"; then
+    enote "judge criteria was correct but the iteration did not close GREEN (T1 not checked off)"; return 1
+  fi
+  echo "judge criteria leads with TESTS: and the iteration closed GREEN (T1 done)"
+  return 0
 }
 
 # Revert finding 6's fix in the INSTALLED iterate prompt: drop the instruction to prepend the
@@ -74,14 +90,16 @@ case_revert() { # <scratch>
 }
 
 # --- deterministic sims for --self-test -------------------------------------------------
-case_sim_pass() { # correct agent: criteria leads with the TESTS: line
+case_sim_pass() { # correct agent: criteria leads with TESTS:, and the iteration closed GREEN
   cat > "$1/.eval/judge-criteria.txt" <<'EOF'
 TESTS: scoped green
-- AC: does the first thing
+- AC: a file named GREETING.txt exists at the repo root containing exactly `hello devflow`
 EOF
+  perl -pi -e 's/^- \[ \] T1\b/- [x] T1/' "$1/$EVAL_FDIR/tasks.md"
 }
-case_sim_revert() { # reverted-prompt agent: no TESTS: line, straight to AC:
+case_sim_revert() { # reverted-prompt agent: still closes GREEN, but NO TESTS: line — isolates finding 6
   cat > "$1/.eval/judge-criteria.txt" <<'EOF'
-- AC: does the first thing
+- AC: a file named GREETING.txt exists at the repo root containing exactly `hello devflow`
 EOF
+  perl -pi -e 's/^- \[ \] T1\b/- [x] T1/' "$1/$EVAL_FDIR/tasks.md"
 }

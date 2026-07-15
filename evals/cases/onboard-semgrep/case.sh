@@ -19,8 +19,14 @@ do not install tools, do not verify the live connection. Register the server and
 EOF
 }
 
-# Nothing beyond the shared bootstrap; the grader reads .mcp.json.
-case_bootstrap() { :; }
+# Reproduce finding 7's on-machine condition: a STALE standalone `uvx semgrep-mcp`
+# registration is already present (the package that only prints a deprecation notice now).
+# A correct onboard run detects it as notice-only and REPLACES it with the built-in server.
+case_bootstrap() { # <scratch>
+  cat > "$1/.mcp.json" <<'EOF'
+{"mcpServers":{"semgrep":{"type":"stdio","command":"uvx","args":["semgrep-mcp"],"env":{}}}}
+EOF
+}
 
 case_grade() { # <scratch> <transcript>
   local dir="$1"
@@ -52,10 +58,14 @@ print("built-in semgrep server registered (semgrep mcp -t stdio, telemetry off)"
 PY
 }
 
-# Revert finding 1 & 7's fix in the INSTALLED onboard prompt: swap the built-in registration
-# line back to the deprecated uvx package + phantom flags. A live run after this must go RED.
+# Revert finding 1 & 7's fix in the INSTALLED onboard prompt back to the PRE-fix step 2:
+# register the standalone uvx package with the phantom flags, and neutralise the deprecation
+# guard so the reverted prompt is coherent (else a capable agent notices the self-contradiction
+# and "corrects" it, masking the regression). A live run after this must go RED.
 case_revert() { # <scratch>
   local f; f="$(eval_cmd_path "$1" speckit.devflow.onboard.md)"
+  perl -0pi -e 's/the standalone `semgrep-mcp` uvx package is \*\*deprecated\*\* \(it only\s+prints a notice pointing here; do not register it\)/the standalone `semgrep-mcp` uvx package is the server to register/s' "$f"
+  perl -0pi -e 's/register the built-in server:/register it:/g' "$f"
   perl -0pi -e 's/-- semgrep mcp -t stdio/-- uvx semgrep-mcp --semgrep-path \$(command -v semgrep)/g' "$f"
   perl -0pi -e 's/SEMGREP_SEND_METRICS=off/--metrics off/g' "$f"
 }

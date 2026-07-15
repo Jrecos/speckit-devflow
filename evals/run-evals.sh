@@ -1,26 +1,33 @@
 #!/usr/bin/env bash
-# DevFlow behavioral eval runner.  (roadmap candidate #2 — the net that catches prompt-behavior
-# regressions before a user does.)  See evals/README.md for the methodology.
+# DevFlow behavioral eval runner.  (roadmap candidate #2; command-authoring-research.md §7;
+# ADR-0021 item 12 — evaluation-driven maintenance of the prompt layer.)  See evals/README.md.
 #
-#   run-evals.sh                 live: run each case through the driver (claude -p), grade
-#                                the artifacts/state the agent produced
+#   run-evals.sh                 live: run each case through the driver (claude -p) in a fresh
+#                                scratch, grade the artifacts/state the agent produced
+#   run-evals.sh --runs N        repeat each live case N times, report pass-rate (default 1;
+#                                live evals are non-deterministic — the skill-creator pattern
+#                                wants repetition)
 #   run-evals.sh --self-test     deterministic, no model: prove each grader PASSES the
-#                                correct-agent sim, goes RED on the reverted-prompt sim, and
-#                                that revert.sh actually mutates the installed prompt (CI-safe)
-#   run-evals.sh --revert        live red-on-revert: revert each fix in the installed prompt,
-#                                run, and REQUIRE the grader to go RED
+#                                correct-agent fixture, goes RED on the reverted-prompt fixture,
+#                                and that revert.sh actually mutates the installed prompt (CI-safe)
+#   run-evals.sh --revert        live blind-A/B sensitivity: revert each fix in the installed
+#                                prompt, run, and REQUIRE the grader to go RED
 #   run-evals.sh --case <name>   restrict to a single case
 #   run-evals.sh --list          list the cases and the finding each guards
+#
+# Prereq-guard: live/--revert modes need `specify` and `claude`. If either is absent they SKIP
+# and exit 0 — this is an opt-in/nightly job, never PR-gating. --self-test needs neither.
 set -uo pipefail
 source "$(dirname "$0")/eval-lib.sh"
 
-MODE="live"; ONLY=""
+MODE="live"; ONLY=""; RUNS=1
 while [ $# -gt 0 ]; do
   case "$1" in
     --self-test) MODE="self-test" ;;
     --revert)    MODE="revert" ;;
     --list)      MODE="list" ;;
     --case)      ONLY="${2:?--case needs a name}"; shift ;;
+    --runs)      RUNS="${2:?--runs needs a number}"; shift ;;
     -h|--help)   grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown arg: $1 (see --help)" >&2; exit 2 ;;
   esac
@@ -50,11 +57,11 @@ selftest_case() { # <name>  → deterministic grader-discrimination + revert-mut
 
     case_sim_pass "$s1"
     case_grade "$s1" "$s1/.eval/transcript.txt" >/dev/null 2>&1 \
-      || { efail "$name: grader REJECTED the correct-agent sim (must pass)"; exit 1; }
+      || { efail "$name: grader REJECTED the correct-agent fixture (must pass)"; exit 1; }
 
     case_sim_revert "$s2"
     if case_grade "$s2" "$s2/.eval/transcript.txt" >/dev/null 2>&1; then
-      efail "$name: grader ACCEPTED the reverted-prompt sim (must go red)"; exit 1; fi
+      efail "$name: grader ACCEPTED the reverted-prompt fixture (must go red)"; exit 1; fi
 
     local before after
     before="$(cat "$s1"/.claude/commands/*.md | shasum | awk '{print $1}')"
@@ -67,26 +74,31 @@ selftest_case() { # <name>  → deterministic grader-discrimination + revert-mut
   )
 }
 
-live_case() { # <name> <reverted?>  → run through the driver and grade
+live_case() { # <name> <reverted?>  → run through the driver RUNS times, report pass-rate
   local name="$1" reverted="${2:-}"
   ( source "$EVAL_ROOT/cases/$name/case.sh"
-    local s; s="$(mktemp -d)"; trap 'rm -rf "$s"' EXIT
-    eval_bootstrap "$s" >/dev/null 2>&1 || { efail "$name: bootstrap failed"; exit 1; }
-    case_bootstrap "$s" >/dev/null 2>&1 || true
-    [ "$reverted" = "reverted" ] && case_revert "$s"
-    local tr="$s/.eval/transcript.txt"
-    eval_dispatch "$s" "$(case_prompt)" "$tr" || enote "$name: driver dispatch returned non-zero (see $tr)"
-    if case_grade "$s" "$tr"; then
-      if [ "$reverted" = "reverted" ]; then
-        efail "$name (reverted): STILL passed — the eval is not sensitive to the fix"; exit 1
-      fi
-      epass "$name (live): behavior correct"
-    else
-      if [ "$reverted" = "reverted" ]; then
-        epass "$name (live, reverted): went RED as required"
+    local want_desc; [ "$reverted" = "reverted" ] && want_desc="went RED" || want_desc="passed"
+    local hits=0 i
+    for i in $(seq 1 "$RUNS"); do
+      local s; s="$(mktemp -d)"
+      eval_bootstrap "$s" >/dev/null 2>&1 || { enote "$name run $i: bootstrap failed"; rm -rf "$s"; continue; }
+      case_bootstrap "$s" >/dev/null 2>&1 || true
+      [ "$reverted" = "reverted" ] && case_revert "$s"
+      local tr="$s/.eval/transcript.txt"
+      eval_dispatch "$s" "$(case_prompt)" "$tr" || enote "$name run $i: driver dispatch non-zero (see transcript)"
+      if case_grade "$s" "$tr" >/dev/null 2>&1; then
+        [ "$reverted" = "reverted" ] || hits=$((hits+1))   # live: correct = grader passed
       else
-        efail "$name (live): behavior WRONG (finding regressed or run inconclusive)"; exit 1
+        [ "$reverted" = "reverted" ] && hits=$((hits+1))   # revert: correct = grader red
       fi
+      rm -rf "$s"
+    done
+    local rate=$(( hits * 100 / RUNS ))
+    local tag; [ "$reverted" = "reverted" ] && tag="live,reverted" || tag="live"
+    if [ "$hits" -eq "$RUNS" ]; then
+      epass "$name ($tag): $hits/$RUNS $want_desc (${rate}%)"
+    else
+      efail "$name ($tag): only $hits/$RUNS $want_desc (${rate}%)"; exit 1
     fi
   )
 }
@@ -96,6 +108,18 @@ if [ "$MODE" = "list" ]; then
     printf '%-26s %s\n' "$name" "$( ( source "$EVAL_ROOT/cases/$name/case.sh"; case_meta ) )"
   done
   exit 0
+fi
+
+# Prereq-guard for the live modes: never hard-fail a CI box that lacks the live tooling.
+if [ "$MODE" = "live" ] || [ "$MODE" = "revert" ]; then
+  missing=""
+  command -v claude  >/dev/null 2>&1 || missing="$missing claude"
+  command -v specify >/dev/null 2>&1 || missing="$missing specify"
+  if [ -n "$missing" ]; then
+    echo "SKIP: live evals need$missing — not installed here. This is an opt-in/nightly job; not PR-gating."
+    echo "(Run 'run-evals.sh --self-test' for the deterministic, model-free grader check.)"
+    exit 0
+  fi
 fi
 
 fails=0; n=0
@@ -112,7 +136,7 @@ done
 echo
 [ "$n" -gt 0 ] || { echo "no cases matched"; exit 2; }
 if [ "$fails" -eq 0 ]; then
-  echo "ALL EVALS PASS ($MODE, $n case(s))"
+  echo "ALL EVALS PASS ($MODE, $n case(s)$([ "$MODE" = live ] && echo ", $RUNS run(s) each"))"
 else
   echo "$fails/$n case(s) FAILED ($MODE)"; exit 1
 fi

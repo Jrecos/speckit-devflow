@@ -154,8 +154,15 @@ check deterministic across repeated runs.
 
 ## Troubleshooting
 
-- **`gh` push fails with "Repository not found"** — the active `gh` account lacks access;
-  `gh auth switch --user Jrecos` and retry.
+- **`gh` push fails with "Repository not found" / "Permission denied … 403"** — the active
+  `gh` account isn't the one with push access. `scripts/release.sh` now handles this itself:
+  it switches to the repo-owner account (`${GH_REPO%%/*}`, i.e. `Jrecos`) for the push, forces
+  gh's credential helper so a stale osxkeychain token for a different account can't win, and
+  restores your prior active account on exit. (Root cause seen cutting v0.2.0: a shell profile
+  that re-sets the active account to a different org account on every new shell, so the release
+  run inherited the wrong one.) If you hit it running git by hand:
+  `gh auth switch --user Jrecos` then push with
+  `git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push https://github.com/Jrecos/speckit-devflow.git <ref>`.
 - **Grep-guard fails after a bump** — a manifest's `version:` line shape changed (indentation,
   quoting) since this runbook was written, so the context-keyed regex in `scripts/release.sh`
   no longer matches. Update the regex in the bump step to match the new shape; don't loosen it

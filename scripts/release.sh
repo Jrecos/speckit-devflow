@@ -18,6 +18,8 @@ cd "$REPO_ROOT"
 
 GH_REPO="Jrecos/speckit-devflow"
 GH_HTTPS="https://github.com/$GH_REPO.git"
+GH_ACCOUNT="${GH_REPO%%/*}"          # the gh account that owns/pushes this repo
+PRIOR_GH_ACCOUNT=""; SWITCHED_ACCOUNT=0   # for restoring the user's active account on exit
 
 # ---- args ----
 DRY_RUN=0
@@ -70,6 +72,10 @@ on_exit() {
   if [ "$DIRTY" = 1 ] && [ "$ec" -ne 0 ]; then
     echo "release: aborting (exit $ec) — restoring working tree" >&2
     restore_tree
+  fi
+  # Leave the user's gh active-account as we found it (we may have switched it to push).
+  if [ "$SWITCHED_ACCOUNT" = 1 ] && [ -n "$PRIOR_GH_ACCOUNT" ]; then
+    gh auth switch --user "$PRIOR_GH_ACCOUNT" >/dev/null 2>&1 || true
   fi
 }
 trap on_exit EXIT
@@ -210,10 +216,23 @@ DIRTY=0   # committed — the tree is clean now; any later failure (tag/push/pub
 git tag "v$VERSION"
 
 echo "== release: pushing (gh HTTPS, not raw origin — see CLAUDE.md) =="
+# The active gh account can drift to another repo's account; a wrong active account 403s the
+# push (observed cutting v0.2.0). Switch to THIS repo's owner account for the push (restored on
+# exit by the trap), and force gh's credential helper so a stale osxkeychain token for a
+# different account can't win over it.
+PRIOR_GH_ACCOUNT="$(gh api user -q .login 2>/dev/null || true)"
+if [ "$PRIOR_GH_ACCOUNT" != "$GH_ACCOUNT" ]; then
+  if gh auth switch --user "$GH_ACCOUNT" >/dev/null 2>&1; then
+    SWITCHED_ACCOUNT=1
+  else
+    echo "release: WARNING — could not switch gh to '$GH_ACCOUNT'; push may 403 if the active account lacks access" >&2
+  fi
+fi
 gh auth setup-git
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-git push "$GH_HTTPS" "$CURRENT_BRANCH"
-git push "$GH_HTTPS" "v$VERSION"
+push_gh() { git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push "$GH_HTTPS" "$1"; }
+push_gh "$CURRENT_BRANCH"
+push_gh "v$VERSION"
 
 echo "== release: creating GitHub release =="
 gh release create "v$VERSION" --repo "$GH_REPO" \

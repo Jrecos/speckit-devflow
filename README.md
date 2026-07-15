@@ -125,9 +125,12 @@ Then you make exactly two decisions:
 2. **STOP #2** — read the evidence (tasks, verdicts, findings, deviations, records).
    `accept` / `accept-with-deviation` / `reject`.
 
-**The complete lifecycle** — machine setup, constitution, the optional product layer,
-every phase with its artifacts, mid-run operations, and the baseline→DevFlow mapping —
-lives in [`docs/development-workflow.md`](docs/development-workflow.md).
+**Trying it on your own project?** Start with the hands-on
+[`docs/try-on-your-project.md`](docs/try-on-your-project.md) — install, onboard, first
+feature, troubleshooting, and a feedback template. **The complete lifecycle** — machine
+setup, constitution, the optional product layer, every phase with its artifacts, mid-run
+operations, and the baseline→DevFlow mapping — lives in
+[`docs/development-workflow.md`](docs/development-workflow.md).
 
 ### Modes ([ADR-0013](docs/decisions/0013-loop-modes-attended-step-autonomous.md))
 

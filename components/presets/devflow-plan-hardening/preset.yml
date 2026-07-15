@@ -3,7 +3,7 @@ schema_version: "1.0"
 preset:
   id: "devflow-plan-hardening"
   name: "DevFlow Plan Hardening"
-  version: "0.1.2"
+  version: "0.2.0"
   description: "Hardens plan/tasks outputs for the DevFlow loop: failing acceptance tests at plan time, per-task acceptance criteria, and a machine-countable task list"
   author: "Jrecos"
   repository: "https://github.com/Jrecos/speckit-devflow"

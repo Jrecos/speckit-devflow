@@ -82,11 +82,13 @@ case_grade() { # <scratch> <transcript>
   return 0
 }
 
-# Revert finding 6's fix in the INSTALLED iterate prompt: drop the instruction to prepend the
-# TESTS: line, so the agent writes only AC: lines into the criteria.
+# Revert finding 6's fix in the INSTALLED iterate prompt (post-ADR-0023/C2): drop the
+# devflow-judge-prep.sh call and the TESTS:-line instruction, so the agent hand-assembles the
+# criteria as just the AC lines — no TESTS: oracle line.
 case_revert() { # <scratch>
   local f; f="$(eval_cmd_path "$1" speckit.devflow.iterate.md)"
-  perl -0pi -e "s/The \\*\\*criteria\\*\\* file starts.*?then the task's \`AC:\` lines/The **criteria** file is the task's \`AC:\` lines/s" "$f"
+  perl -0pi -e 's/\$\(bash [^)]*devflow-judge-prep\.sh[^)]*\)/<diff> <criteria> <slice>/g' "$f"
+  perl -0pi -e 's/the criteria with the `TESTS:` line \(your step-5 scoped\s+result\) prepended/the criteria (just the task `AC:` lines, no TESTS line)/s' "$f"
 }
 
 # --- deterministic sims for --self-test -------------------------------------------------

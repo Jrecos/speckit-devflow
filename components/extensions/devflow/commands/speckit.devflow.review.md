@@ -13,12 +13,13 @@ description: "Runs the DevFlow Review phase — local code review + Semgrep scan
 ## Steps
 
 1. **Scope the diff** (REQUIRED): read `.specify/feature.json` → `feature_directory`
-   (`<fdir>`). Read `<fdir>/loop/state.json` → `base_commit` (stamped at loop start).
-   The review surface is `git diff <base_commit> HEAD` — a **deterministic** base, robust
-   to stacked-branch topology (do NOT use `merge-base`: if this feature branched off an
-   unmerged one, merge-base picks a stale point and floods the diff with prior features'
-   changes). If `base_commit` is null (older state), fall back to the first commit that
-   touched `<fdir>/` and say so in findings.md.
+   (`<fdir>`). The review surface is the output of
+   `bash .specify/extensions/devflow/scripts/bash/devflow-diff-surface.sh diff` — the ONE
+   canonical feature diff (ADR-0023). It bases on `base_commit` (stamped once at loop start):
+   **deterministic** and topology-proof, **not** `merge-base` (which, on a branch stacked off
+   an unmerged feature, picks a stale point and floods the diff with prior features' changes),
+   with a fallback to the first commit that touched `<fdir>/` for older state — the script
+   prints that fallback on stderr; echo it into findings.md.
 2. **Three passes** over that surface:
    - **Code quality** (judgment): correctness, error handling, edge cases, test
      honesty — do the tests assert behavior or pass vacuously?

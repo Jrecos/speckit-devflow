@@ -79,15 +79,15 @@ description: "Runs exactly ONE DevFlow build-loop iteration: picks one task from
      reason in the failure note.
 
 7. **Judge** — the iteration exit gate:
-   1. Write three temp files: the diff (`git diff`), the criteria, the spec slice
-      (sections of `<fdir>/spec.md` this task touches). The **criteria** file starts
-      with a `TESTS:` line stating the step-5 scoped result (e.g. `TESTS: scoped green`),
-      then the task's `AC:` lines — the judge sees only the diff, so this is how it
-      weighs the primary oracle and avoids failing on code outside the diff (ADR-0003).
-   2. Run exactly:
-      `bash .specify/extensions/devflow/scripts/bash/devflow-judge.sh <diff> <criteria> <slice>`
-      Do not modify the command. (No `DEVFLOW_JUDGE_CMD` in the env → it falls back
-      to Claude and warns; that is expected, not an error.)
+   1. Build two inputs: a **criteria-body** file = this task's `AC:` line(s); a **slice** file
+      = the `<fdir>/spec.md` sections this task touches.
+   2. Run exactly — the prep script (ADR-0023) assembles the three judge files: this task's
+      working diff (`git diff`) and the criteria with the `TESTS:` line (your step-5 scoped
+      result) prepended, so the judge weighs the primary oracle and won't fail on code outside
+      the diff (ADR-0003):
+      `bash .specify/extensions/devflow/scripts/bash/devflow-judge.sh $(bash .specify/extensions/devflow/scripts/bash/devflow-judge-prep.sh --diff working --tests "<step-5 scoped result, e.g. scoped green>" --criteria-file <criteria-body> --slice-file <slice>)`
+      Do not modify these commands. (No `DEVFLOW_JUDGE_CMD` in the env → it falls back to Claude
+      and warns; that is expected, not an error.)
    3. **Non-zero exit or verdict FAIL** →
       `python3 STATE_PY set STATE verdicts.<task-id> '{"verdict":"FAIL","reason":"<reason>"}'`
       then the RED close (step 5) with the judge's reason as the failure note.

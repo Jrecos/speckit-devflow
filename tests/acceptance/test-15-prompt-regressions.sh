@@ -11,8 +11,9 @@ START="$CMDS/speckit.devflow.start.md"
 REVIEW="$CMDS/speckit.devflow.review.md"
 VERIFY="$CMDS/speckit.devflow.verify.md"
 ITERATE="$CMDS/speckit.devflow.iterate.md"
+CAPTURE="$CMDS/speckit.devflow.capture.md"
 
-for f in "$ONBOARD" "$START" "$REVIEW" "$VERIFY" "$ITERATE"; do
+for f in "$ONBOARD" "$START" "$REVIEW" "$VERIFY" "$ITERATE" "$CAPTURE"; do
   [ -f "$f" ] || fail "missing command doc: $f"
 done
 
@@ -39,20 +40,22 @@ grep -q 'NOT a shell variable' "$START" || fail "finding 3: start.md no longer w
 grep -q '/speckit-devflow-status'      "$START" || fail "finding 4: start.md no longer routes inspection to read-only /speckit-devflow-status"
 grep -q 'one dispatch, one loop-status' "$START" || fail "finding 4: start.md no longer marks loop-status once-per-dispatch"
 
-# --- finding 5: review.md + verify.md scope the diff to base_commit, never merge-base ----
-# Fix: diff surface is `base_commit..HEAD` (stamped once at loop start) with an explicit
-# do-NOT-use-merge-base guard (merge-base goes stale on a stacked branch). Assert BOTH the
-# base_commit surface AND the guard text — "merge-base" itself lives inside the guard, so we
-# check the guard's presence, not the bare token's absence.
-grep -q 'base_commit'            "$REVIEW" || fail "finding 5: review.md no longer scopes the diff to base_commit"
-grep -q 'NOT use `merge-base`'   "$REVIEW" || fail "finding 5: review.md dropped the do-NOT-use-merge-base guard"
-grep -q 'base_commit'            "$VERIFY" || fail "finding 5: verify.md no longer scopes the diff to base_commit"
-grep -q 'NOT use `merge-base`'   "$VERIFY" || fail "finding 5: verify.md dropped the do-NOT-use-merge-base guard"
+# --- finding 5: review/verify/capture delegate the diff surface to devflow-diff-surface.sh ---
+# Post-ADR-0023 (C1): the base_commit-not-merge-base invariant + null→first-touch fallback now
+# live IN devflow-diff-surface.sh (behavior-tested by test-16). The commands must INVOKE it
+# rather than hand-roll `git diff merge-base`; reverting a caller to a hand-scoped merge-base
+# drops the invocation token → red. (The guarantee moved from grep-on-prose to grep-on-
+# invocation + a script-behavior test — strictly stronger.)
+grep -q 'devflow-diff-surface.sh diff'         "$REVIEW"  || fail "finding 5: review.md no longer invokes devflow-diff-surface.sh for the review surface"
+grep -q 'devflow-judge-prep.sh --diff feature' "$VERIFY"  || fail "finding 5: verify.md no longer scopes the judge diff to the feature surface (judge-prep --diff feature → base_commit, not merge-base)"
+grep -q 'devflow-diff-surface.sh first-commit' "$CAPTURE" || fail "finding 5: capture.md no longer invokes devflow-diff-surface.sh for its range base"
 
-# --- finding 6: verify.md + iterate.md feed the test oracle to the judge -----------------
-# Fix: prepend a `TESTS:` line to the judge criteria so the judge weighs the green suite as
-# the primary oracle and doesn't FAIL on code outside the diff (ADR-0003).
-grep -q 'TESTS:' "$VERIFY"  || fail "finding 6: verify.md no longer prepends a TESTS: line to the judge criteria"
-grep -q 'TESTS:' "$ITERATE" || fail "finding 6: iterate.md no longer prepends a TESTS: line to the judge criteria"
+# --- finding 6: verify.md + iterate.md route the judge through devflow-judge-prep.sh --------
+# Post-ADR-0023 (C2): the TESTS:-line-first guarantee now lives in devflow-judge-prep.sh
+# (behavior-tested by test-17). Both callers must INVOKE it (with their diff mode) rather than
+# hand-assemble the criteria; hand-rolling criteria without the TESTS: line drops the
+# invocation token → red. (grep-on-prose → grep-on-invocation + script-behavior test.)
+grep -q 'devflow-judge-prep.sh --diff feature' "$VERIFY"  || fail "finding 6: verify.md no longer assembles the judge criteria via devflow-judge-prep.sh (TESTS: oracle line)"
+grep -q 'devflow-judge-prep.sh --diff working' "$ITERATE" || fail "finding 6: iterate.md no longer assembles the judge criteria via devflow-judge-prep.sh (TESTS: oracle line)"
 
 pass "prompt-regression net: 7 findings guarded"

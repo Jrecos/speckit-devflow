@@ -22,20 +22,15 @@ description: "Runs the DevFlow Verify phase — full test suite plus a judge ver
    acceptance tests written at Plan time. Record pass/fail per file.
    *If `test_full` is empty:* STOP and report — run `/speckit-devflow-onboard`.
 4. **Whole-diff judge**:
-   - Determine the diff surface from `<fdir>/loop/state.json` → `base_commit`
-     (stamped at loop start): `git diff <base_commit> HEAD`. Do NOT use `merge-base`
-     — on a stacked branch it picks a stale point and floods the diff with prior
-     features. If `base_commit` is null, fall back to the feature's first commit.
-   - Write temp files: that diff, the acceptance criteria, and the slice:
-     - **criteria** = the **suite result from step 3** (e.g. `TESTS: 36 passed / 0 failed`)
-       as the first line, then all `AC:` lines from tasks.md + the acceptance-test list
-       from plan.md. The judge sees only the diff, so the test result is how it weighs
-       the primary oracle (ADR-0003) on anything mechanical.
-     - **slice** = the complete spec.md.
-   - Run exactly:
-     `bash .specify/extensions/devflow/scripts/bash/devflow-judge.sh <diff> <criteria> <slice>`
-     Do not modify the command. (Fallback warning about same-family judging is
-     expected when `DEVFLOW_JUDGE_CMD` is unset — not an error.)
+   - Build two inputs: a **criteria-body** file = all `AC:` lines from tasks.md + the
+     acceptance-test list from plan.md; a **slice** file = the complete spec.md.
+   - Run exactly — the prep script (ADR-0023) assembles the three judge files: the whole-
+     **feature** diff via `devflow-diff-surface.sh` (`base_commit`-not-`merge-base`, C1) and the
+     criteria with the `TESTS:` primary-oracle line (the step-3 suite result) prepended, so the
+     judge weighs the green suite and won't FAIL on code outside the diff (ADR-0003):
+     `bash .specify/extensions/devflow/scripts/bash/devflow-judge.sh $(bash .specify/extensions/devflow/scripts/bash/devflow-judge-prep.sh --diff feature --tests "<step-3 suite result, e.g. 36 passed / 0 failed>" --criteria-file <criteria-body> --slice-file <spec.md>)`
+     Do not modify these commands. (Fallback warning about same-family judging is expected when
+     `DEVFLOW_JUDGE_CMD` is unset — not an error.)
    - **Reading the verdict:** a criterion the judge marks unverifiable *because its
      subject is outside the diff* (a dependency on unchanged code) is **not** a defect —
      if the suite is green it is covered by the primary oracle. Record such notes, but a

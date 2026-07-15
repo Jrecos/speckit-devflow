@@ -13,8 +13,10 @@ description: "Scans the feature's committed decision records and proposes durabl
 
 ## Steps
 
-1. Read `.specify/feature.json` → `feature_directory`; find the feature's commit
-   range (`git log --oneline` from the feature's first commit to HEAD).
+1. Read `.specify/feature.json` → `feature_directory`. The feature's range base is
+   `bash .specify/extensions/devflow/scripts/bash/devflow-diff-surface.sh first-commit`
+   (ADR-0023 — the one definition of the feature's first commit); the range is `<base>..HEAD`
+   (`git log --oneline <base>..HEAD`).
 2. Collect the decision records created in that range — run:
    `git log --diff-filter=A --name-only --pretty=format: <base>..HEAD -- docs/decisions/`
    — plus the reconcile ADR if one exists.

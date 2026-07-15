@@ -69,8 +69,11 @@ specify preset add   --dev "$DEVFLOW/components/presets/devflow-plan-hardening"
 specify workflow add "$DEVFLOW/components/workflows/devflow/workflow.yml"
 ```
 
-> If any `specify` sub-command rejects a flag, run it with `--help` — the CLI evolves.
-> The forms above are what DevFlow's own acceptance tests use against 0.12.11.
+> Two confirmation prompts are expected and safe to accept: `specify init .` on an
+> existing (non-empty) project asks "continue? [y/N]", and `specify extension add --from`
+> asks "Continue with installation? [y/N]" — answer **y** to both. If any sub-command
+> rejects a flag, run it with `--help` — the CLI evolves. The forms above are verified
+> against 0.12.11 (the release path was installed end-to-end into a clean project).
 
 ## 3 · Onboard the project
 

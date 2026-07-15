@@ -160,6 +160,7 @@ The [complete phase-by-phase reference](development-workflow.md) has the full ta
 | A workflow gate "pauses" and nothing happens (headless) | `gate` paused for lack of TTY → `specify workflow resume <run-id>` in an interactive terminal. |
 | `/speckit-devflow-start` refuses a phase ("cannot complete X") | the flow guard is doing its job — the phase's artifact doesn't exist yet. Do the work; don't hand-edit `devflow-flow.json`. |
 | superspec brainstorm feels thin | superspec bridges to obra/superpowers skills; install those, or lean on `/speckit-clarify`. |
+| semgrep MCP won't start (protobuf crash / instant exit / "semgrep not found") | uvx defaults to Python 3.14 (semgrep-mcp's protobuf ext crashes) → `--python 3.12`; there's no `--metrics` flag → use `-e SEMGREP_SEND_METRICS=off`; install the CLI (`uv tool install semgrep`) and pass `--semgrep-path "$(command -v semgrep)"`. Onboard now does all three; `.mcp.json` is per-clone. |
 | A task keeps failing | it parks after 2 attempts and the loop moves on; you triage it at STOP #2 with its failure history. |
 
 ## 8 · Known v0.1 limitations (so nothing surprises you)

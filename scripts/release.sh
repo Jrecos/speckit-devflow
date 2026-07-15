@@ -58,7 +58,13 @@ dirty_bumped_files="$(git status --porcelain -- "${BUMPED_FILES[@]}")"
 # while DIRTY=1 restores BUMPED_FILES to HEAD — the tree only stays dirty
 # across a successful run's own commit, or a --dry-run's deliberate stop.
 DIRTY=0
-restore_tree() { git checkout -- "${BUMPED_FILES[@]}" 2>/dev/null || true; }
+restore_tree() {
+  # Restore from HEAD, not the index. In the real-run window between `git add` and the
+  # commit, a bare `git checkout -- ` would reproduce the STAGED bumped content;
+  # `git checkout HEAD -- ` resets both the index and the working tree to HEAD, so the
+  # restore is complete and unstaged even if a commit/tag fails mid-flight (validator finding).
+  git checkout HEAD -- "${BUMPED_FILES[@]}" 2>/dev/null || true
+}
 on_exit() {
   local ec=$?
   if [ "$DIRTY" = 1 ] && [ "$ec" -ne 0 ]; then
@@ -188,6 +194,9 @@ bash scripts/onboard-smoke.sh dist
 if [ "$DRY_RUN" = 1 ]; then
   restore_tree
   DIRTY=0
+  # Verify the claim rather than asserting it: a swallowed restore failure must not print success.
+  leftover="$(git status --porcelain -- "${BUMPED_FILES[@]}")"
+  [ -z "$leftover" ] || { echo "release: WARNING — dry-run restore left changes in the version-literal files:" >&2; printf '%s\n' "$leftover" >&2; exit 1; }
   echo "DRY RUN — tree restored, no release cut"
   exit 0
 fi
@@ -195,8 +204,10 @@ fi
 echo "== release: committing + tagging =="
 git add "${BUMPED_FILES[@]}"
 git commit -m "release: v$VERSION"
+DIRTY=0   # committed — the tree is clean now; any later failure (tag/push/publish) must
+          # NOT trigger a working-tree restore (there is nothing dirty to restore, and the
+          # commit stands — the operator re-runs the tag/push by hand).
 git tag "v$VERSION"
-DIRTY=0   # committed — nothing left in the working tree for the failure-path restore
 
 echo "== release: pushing (gh HTTPS, not raw origin — see CLAUDE.md) =="
 gh auth setup-git

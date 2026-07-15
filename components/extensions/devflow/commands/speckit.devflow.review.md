@@ -24,8 +24,10 @@ description: "Runs the DevFlow Review phase — local code review + Semgrep scan
      honesty — do the tests assert behavior or pass vacuously?
    - **Semgrep** (mechanical): scan the changed files with the semgrep MCP tools —
      dataflow/taint analysis an LLM read can miss. *If the semgrep MCP is not
-     available:* STOP and report — run `/speckit-devflow-onboard` to install it;
-     do not substitute your own reading and call it a scan.
+     available — missing, OR the server only returns a deprecation notice (the old
+     standalone `semgrep-mcp`) instead of scan tools:* STOP and report — run
+     `/speckit-devflow-onboard` to (re)install the built-in `semgrep mcp` server; do
+     not substitute your own reading and call it a scan.
    - **Security** (judgment): injection, authz/authn holes, secrets in code, unsafe
      deserialization, path traversal — on the changed surface only.
 3. **Write both artifacts** (REQUIRED, before anything else happens):

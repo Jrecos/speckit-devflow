@@ -59,7 +59,8 @@ one constructible landing), driven by `/speckit-devflow-start`, 2026-07-15.
 | 3 | `start.md`'s `FLOW` shorthand read as a shell var — zsh doesn't word-split it, and the Bash tool's fresh-shell-per-call means a var never survives anyway | prompt | clarified `FLOW` is a doc-shorthand for the literal `bash …/devflow-flow.sh` path, not a variable | `b8014f9` |
 | 4 | `loop-status` looks read-only but mutates + spent budget per *call* → a "peek" before the first dispatch burned phantom budget | script + prompt | budget keyed to **iteration advancement** (`last_counted_iteration`), so spurious/early calls can't inflate it; start.md §6 marks loop-status as a once-per-dispatch advance step and points inspection at read-only `/speckit-devflow-status` | `ac719ae` |
 | 5 | Review/verify diff scoping used `merge-base dev..HEAD`; on a branch stacked off an unmerged feature (004 off 003) that base was stale → 170 files / 12k lines of prior-feature churn, not 004's surface. Agent had to hand-scope. | script + prompt | init stamps `base_commit = HEAD` **once at loop start**; review.md + verify.md diff `base_commit..HEAD` (deterministic, topology-proof) with a first-touch fallback for old state | *(this change)* |
-| 6 | Verify judge returned **FAIL** on two criteria it could not confirm — `PageIcon kind="voltpulse"` and `.dash-card-title` live in *unchanged* files (added in S1), invisible in the diff. A green 36/36 suite already proved them. Per ADR-0016 the FAIL parked to STOP #2 (design worked), but it was a **scope false-negative** that forced a human decision. | script + prompt | judge fallback prompt rewritten (ADR-0003): tests are the primary oracle, do NOT FAIL for code outside the diff or already covered by a green suite — FAIL only for defects *in* the diff or subjective-quality gaps; verify.md/iterate.md now prepend a `TESTS:` line to the criteria so the judge can weigh the oracle | *(this change)* |
+| 6 | Verify judge returned **FAIL** on two criteria it could not confirm — `PageIcon kind="voltpulse"` and `.dash-card-title` live in *unchanged* files (added in S1), invisible in the diff. A green 36/36 suite already proved them. Per ADR-0016 the FAIL parked to STOP #2 (design worked), but it was a **scope false-negative** that forced a human decision. | script + prompt | judge fallback prompt rewritten (ADR-0003): tests are the primary oracle, do NOT FAIL for code outside the diff or already covered by a green suite — FAIL only for defects *in* the diff or subjective-quality gaps; verify.md/iterate.md now prepend a `TESTS:` line to the criteria so the judge can weigh the oracle | `3d58be6` |
+| 7 | Review's mechanical Semgrep pass was unavailable: the standalone `semgrep-mcp` uvx package (which finding #1's onboard line installed) is **deprecated** — the MCP server moved into the `semgrep` binary, so the old server now only returns a deprecation notice, not scan tools. Review had no dataflow/taint pass. | prompt | onboard registers the **built-in** server (`claude mcp add semgrep … -- semgrep mcp -t stdio`), drops the dead `uvx semgrep-mcp`/`--semgrep-path`; review.md treats a notice-only server as "unavailable"; adoption-guide troubleshooting row updated | *(this change)* |
 
 **Meta-signal:** findings 1, 3, 4, 5, 6 were *all found by hand in one live run* — which is
 the evidence promoting **candidate #2 (eval harness)** to the highest-leverage v0.2
@@ -70,6 +71,16 @@ a prompt typo but the **judge-context seam** — a judge that sees only the diff
 be blind to the codebase the diff depends on. The fix (defer to the test oracle, don't FAIL
 on outside-diff) mitigates it; a fuller answer (letting the judge *read* referenced
 unchanged files) is a v0.2 candidate to watch if the false-negative recurs.
+
+Finding 7 is a **third class: upstream drift** — a dependency we pin (the semgrep MCP)
+changed shape underneath us. Neither an eval harness nor a code test catches this; only a
+real run against current tooling does. It argues for a periodic "onboard against a clean
+machine" smoke check as part of release, not just the offline acceptance suite.
+
+**Opportunity surfaced by finding 7:** the built-in `semgrep mcp` also exposes *agent hook*
+modes (`-k post-tool-cli-scan`, `stop-cli-scan`, `inject-secure-defaults`). That maps
+directly onto DevFlow's layer-2 hook seam — a candidate for moving the Semgrep pass from a
+Review-time prompt step to a guaranteed PostTool/Stop hook. Watch, don't build yet.
 
 **Process rule adopted:** a release = bump manifest versions **and** tag **and** re-upload
 assets, then verify a clean install reports the new number — atomically, not the tag alone.

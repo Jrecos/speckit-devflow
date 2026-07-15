@@ -26,16 +26,19 @@ description: "Validates and installs every DevFlow prerequisite at project scope
 1. **Tools** (REQUIRED): `command -v git` and `command -v claude` both resolve; the
    directory is a git repo with ≥1 commit. *Any missing:* abort with the exact
    install instruction — nothing later works without these.
-2. **Semgrep MCP** (for Review's Semgrep pass): if `claude mcp list` doesn't show
-   `semgrep`, register it — handling these known pitfalls rather than trusting one literal:
-   - semgrep-mcp's protobuf extension crashes under Python 3.14 → pin `uvx --python 3.12`.
-   - there is **no `--metrics` flag**; disable telemetry with env `SEMGREP_SEND_METRICS=off`.
-   - if the `semgrep` CLI itself is missing, `uv tool install semgrep`, then pass
-     `--semgrep-path "$(command -v semgrep)"`.
-   A form verified to work (adapt versions/paths to the machine):
-   `claude mcp add semgrep -s project -e SEMGREP_SEND_METRICS=off -- uvx --python 3.12 semgrep-mcp --semgrep-path "$(command -v semgrep)"`
-   Confirm it connects (`claude mcp list`). Note `.mcp.json` is commonly gitignored, so
-   this registration is per-clone — other clones/machines re-run this step.
+2. **Semgrep MCP** (for Review's Semgrep pass): the MCP server now **ships inside the
+   `semgrep` binary** — the standalone `semgrep-mcp` uvx package is **deprecated** (it only
+   prints a notice pointing here; do not register it). Handle these pitfalls:
+   - the `semgrep` CLI must exist and be recent enough to expose the subcommand — check
+     `semgrep mcp --help`; if missing, `uv tool install semgrep` (or `uv tool upgrade semgrep`).
+   - disable telemetry with env `SEMGREP_SEND_METRICS=off` (there is **no `--metrics` flag**).
+   - transport is stdio (what `claude mcp add … -- <cmd>` expects).
+   If `claude mcp list` doesn't already show a working `semgrep`, register the built-in server:
+   `claude mcp add semgrep -s project -e SEMGREP_SEND_METRICS=off -- semgrep mcp -t stdio`
+   Confirm it connects and exposes scan tools (`claude mcp list`) — **not** a lone deprecation
+   notice; if you see that notice, a stale `semgrep-mcp` registration is still present (remove
+   it: `claude mcp remove semgrep`, then re-add the line above). Note `.mcp.json` is commonly
+   gitignored, so this registration is per-clone — other clones/machines re-run this step.
 3. **Project commands** (REQUIRED — hooks are inert without them): detect lint /
    typecheck / scoped-test / full-test commands (package.json scripts, Makefile,
    pyproject.toml…). Present proposals to the human, **wait for confirmation**, then

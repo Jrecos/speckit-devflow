@@ -13,8 +13,12 @@ description: "Runs the DevFlow Review phase — local code review + Semgrep scan
 ## Steps
 
 1. **Scope the diff** (REQUIRED): read `.specify/feature.json` → `feature_directory`
-   (`<fdir>`). Find the feature's base (`git log --oneline` to its first commit);
-   take `git diff <base>..HEAD` as the review surface.
+   (`<fdir>`). Read `<fdir>/loop/state.json` → `base_commit` (stamped at loop start).
+   The review surface is `git diff <base_commit> HEAD` — a **deterministic** base, robust
+   to stacked-branch topology (do NOT use `merge-base`: if this feature branched off an
+   unmerged one, merge-base picks a stale point and floods the diff with prior features'
+   changes). If `base_commit` is null (older state), fall back to the first commit that
+   touched `<fdir>/` and say so in findings.md.
 2. **Three passes** over that surface:
    - **Code quality** (judgment): correctness, error handling, edge cases, test
      honesty — do the tests assert behavior or pass vacuously?

@@ -22,13 +22,25 @@ description: "Runs the DevFlow Verify phase — full test suite plus a judge ver
    acceptance tests written at Plan time. Record pass/fail per file.
    *If `test_full` is empty:* STOP and report — run `/speckit-devflow-onboard`.
 4. **Whole-diff judge**:
-   - Write temp files: the full diff (feature base → HEAD), the acceptance criteria
-     (all `AC:` lines from tasks.md + the acceptance-test list from plan.md), and
-     the complete spec.md as the slice.
+   - Determine the diff surface from `<fdir>/loop/state.json` → `base_commit`
+     (stamped at loop start): `git diff <base_commit> HEAD`. Do NOT use `merge-base`
+     — on a stacked branch it picks a stale point and floods the diff with prior
+     features. If `base_commit` is null, fall back to the feature's first commit.
+   - Write temp files: that diff, the acceptance criteria, and the slice:
+     - **criteria** = the **suite result from step 3** (e.g. `TESTS: 36 passed / 0 failed`)
+       as the first line, then all `AC:` lines from tasks.md + the acceptance-test list
+       from plan.md. The judge sees only the diff, so the test result is how it weighs
+       the primary oracle (ADR-0003) on anything mechanical.
+     - **slice** = the complete spec.md.
    - Run exactly:
      `bash .specify/extensions/devflow/scripts/bash/devflow-judge.sh <diff> <criteria> <slice>`
      Do not modify the command. (Fallback warning about same-family judging is
      expected when `DEVFLOW_JUDGE_CMD` is unset — not an error.)
+   - **Reading the verdict:** a criterion the judge marks unverifiable *because its
+     subject is outside the diff* (a dependency on unchanged code) is **not** a defect —
+     if the suite is green it is covered by the primary oracle. Record such notes, but a
+     FAIL that rests only on outside-diff / test-covered criteria is a scope artifact:
+     say so explicitly in the report's Reason and Recommendation so STOP #2 has the truth.
 5. **Deviations**: compare implementation against spec.md; note every behavior that
    differs from the contract text, even where tests pass.
 6. **Write `<fdir>/verify-report.md`** (REQUIRED, exactly this shape — stop2-prep

@@ -57,13 +57,19 @@ one constructible landing), driven by `/speckit-devflow-start`, 2026-07-15.
 | 1 | onboard's semgrep line broke on-machine: phantom `--metrics off` flag; `uvx` Python-3.14 protobuf crash; missing semgrep CLI | prompt | corrected to `-e SEMGREP_SEND_METRICS=off`, `uvx --python 3.12`, `uv tool install semgrep` + `--semgrep-path`; troubleshooting row added | `2b9aa48` |
 | 2 | release install reported `v0.1.0` — tag was bumped but manifest `version:` fields weren't | release process | bump component + bundle versions atomically with the tag; verify a clean install reports the new number | `305c7eb` |
 | 3 | `start.md`'s `FLOW` shorthand read as a shell var — zsh doesn't word-split it, and the Bash tool's fresh-shell-per-call means a var never survives anyway | prompt | clarified `FLOW` is a doc-shorthand for the literal `bash …/devflow-flow.sh` path, not a variable | `b8014f9` |
-| 4 | `loop-status` looks read-only but mutates + spent budget per *call* → a "peek" before the first dispatch burned phantom budget | script + prompt | budget keyed to **iteration advancement** (`last_counted_iteration`), so spurious/early calls can't inflate it; start.md §6 marks loop-status as a once-per-dispatch advance step and points inspection at read-only `/speckit-devflow-status` | *(this change)* |
+| 4 | `loop-status` looks read-only but mutates + spent budget per *call* → a "peek" before the first dispatch burned phantom budget | script + prompt | budget keyed to **iteration advancement** (`last_counted_iteration`), so spurious/early calls can't inflate it; start.md §6 marks loop-status as a once-per-dispatch advance step and points inspection at read-only `/speckit-devflow-status` | `ac719ae` |
+| 5 | Review/verify diff scoping used `merge-base dev..HEAD`; on a branch stacked off an unmerged feature (004 off 003) that base was stale → 170 files / 12k lines of prior-feature churn, not 004's surface. Agent had to hand-scope. | script + prompt | init stamps `base_commit = HEAD` **once at loop start**; review.md + verify.md diff `base_commit..HEAD` (deterministic, topology-proof) with a first-touch fallback for old state | *(this change)* |
+| 6 | Verify judge returned **FAIL** on two criteria it could not confirm — `PageIcon kind="voltpulse"` and `.dash-card-title` live in *unchanged* files (added in S1), invisible in the diff. A green 36/36 suite already proved them. Per ADR-0016 the FAIL parked to STOP #2 (design worked), but it was a **scope false-negative** that forced a human decision. | script + prompt | judge fallback prompt rewritten (ADR-0003): tests are the primary oracle, do NOT FAIL for code outside the diff or already covered by a green suite — FAIL only for defects *in* the diff or subjective-quality gaps; verify.md/iterate.md now prepend a `TESTS:` line to the criteria so the judge can weigh the oracle | *(this change)* |
 
-**Meta-signal:** findings 1, 3, 4 are all *prompt/driver fragilities* — which is the
-evidence promoting **candidate #2 (eval harness)** as the highest-leverage v0.2 investment:
-it would catch this whole class before a user does. Finding 4 also reinforces the
-driver-parity theme (the orchestrator manually reproducing engine behavior is where
-fragility clusters).
+**Meta-signal:** findings 1, 3, 4, 5, 6 were *all found by hand in one live run* — which is
+the evidence promoting **candidate #2 (eval harness)** to the highest-leverage v0.2
+investment: it would catch this whole class before a user does. Findings 4 and 5 reinforce
+the driver-parity theme (the orchestrator manually reproducing engine behavior — budget
+accounting, diff scoping — is where fragility clusters). Finding 6 is different in kind: not
+a prompt typo but the **judge-context seam** — a judge that sees only the diff will always
+be blind to the codebase the diff depends on. The fix (defer to the test oracle, don't FAIL
+on outside-diff) mitigates it; a fuller answer (letting the judge *read* referenced
+unchanged files) is a v0.2 candidate to watch if the false-negative recurs.
 
 **Process rule adopted:** a release = bump manifest versions **and** tag **and** re-upload
 assets, then verify a clean install reports the new number — atomically, not the tag alone.

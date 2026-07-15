@@ -25,6 +25,7 @@
   "feature": "<slug>", "feature_dir": "specs/<slug>",
   "mode": "attended|attended-step|autonomous", "entry": "tasks|fix-tasks",
   "in_iteration": false, "iteration": 0,
+  "base_commit": "<HEAD sha at loop start — deterministic diff base for review/verify>",
   "current_task": null, "tasks_done_at_start": 0, "last_record": null,
   "iteration_outcome": null,
   "budget": {"used": 0, "total": 0},

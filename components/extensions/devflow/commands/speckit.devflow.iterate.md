@@ -79,8 +79,11 @@ description: "Runs exactly ONE DevFlow build-loop iteration: picks one task from
      reason in the failure note.
 
 7. **Judge** — the iteration exit gate:
-   1. Write three temp files: the diff (`git diff`), the criteria (the task's AC
-      lines), the spec slice (sections of `<fdir>/spec.md` this task touches).
+   1. Write three temp files: the diff (`git diff`), the criteria, the spec slice
+      (sections of `<fdir>/spec.md` this task touches). The **criteria** file starts
+      with a `TESTS:` line stating the step-5 scoped result (e.g. `TESTS: scoped green`),
+      then the task's `AC:` lines — the judge sees only the diff, so this is how it
+      weighs the primary oracle and avoids failing on code outside the diff (ADR-0003).
    2. Run exactly:
       `bash .specify/extensions/devflow/scripts/bash/devflow-judge.sh <diff> <criteria> <slice>`
       Do not modify the command. (No `DEVFLOW_JUDGE_CMD` in the env → it falls back

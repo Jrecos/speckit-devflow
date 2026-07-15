@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: devflow
   name: "DevFlow Loop Engine"
-  version: "0.1.0"
+  version: "0.1.1"
   description: "Autonomous spec-driven build loop: one task per fresh-context iteration, maker/checker/judge verification, close-contract Stop gate with auto-commit, and pipeline commands for review, verify, reconcile, and capture"
   category: "process"
   effect: "read-write"

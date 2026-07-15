@@ -48,4 +48,16 @@ python3 -c '
 import json;s=json.load(open("specs/012-demo/loop/state.json"))
 assert "T1" in s["parked"], s["parked"]' || fail "cap must park T1"
 echo "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["continue"]==True, d' || fail "loop should continue past parked task"
-pass "loop-status: three brakes + backstop + parking"
+# Anti-phantom budget (2026-07-15 finding): budget spends per iteration ADVANCE, not per call.
+cd /tmp; make_scratch_project "$S"; install_devflow_assets "$S"; cd "$S"
+write_state "$S" iteration=0 budget='{"used":0,"total":9}'
+run_ls >/dev/null; run_ls >/dev/null   # two spurious calls before any dispatch
+[ "$(python3 -c 'import json;print(json.load(open("specs/012-demo/loop/state.json"))["budget"]["used"])')" = "0" ] || fail "spurious loop-status calls (iteration=0) must NOT spend budget"
+# now an iteration advances → exactly one budget count, and a repeat call doesn't double it
+write_state "$S" iteration=1 budget='{"used":0,"total":9}'
+run_ls >/dev/null
+u1=$(python3 -c 'import json;print(json.load(open("specs/012-demo/loop/state.json"))["budget"]["used"])')
+run_ls >/dev/null   # same iteration, no advance
+u2=$(python3 -c 'import json;print(json.load(open("specs/012-demo/loop/state.json"))["budget"]["used"])')
+[ "$u1" = "1" ] && [ "$u2" = "1" ] || fail "budget must count once per iteration advance, not per call (got $u1 then $u2)"
+pass "loop-status: three brakes + backstop + parking + iteration-keyed budget"

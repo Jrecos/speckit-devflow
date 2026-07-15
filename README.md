@@ -127,7 +127,8 @@ Then you make exactly two decisions:
 
 **Trying it on your own project?** Start with the hands-on
 [`docs/try-on-your-project.md`](docs/try-on-your-project.md) — install, onboard, first
-feature, troubleshooting, and a feedback template. **The complete lifecycle** — machine
+feature, troubleshooting, and a feedback template. Where it's headed + what real runs have
+taught us: [`docs/roadmap.md`](docs/roadmap.md). **The complete lifecycle** — machine
 setup, constitution, the optional product layer, every phase with its artifacts, mid-run
 operations, and the baseline→DevFlow mapping — lives in
 [`docs/development-workflow.md`](docs/development-workflow.md).

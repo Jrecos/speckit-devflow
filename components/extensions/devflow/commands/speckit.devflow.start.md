@@ -86,9 +86,12 @@ the record. Do not continue past a reject.
 `FLOW start build`, then loop:
 1. Dispatch ONE iteration via Bash: `claude -p "/speckit-devflow-iterate"`
    (fresh context; the child session's hooks + Stop-gate enforce the close).
-2. Run `bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh` —
-   it parses/updates state, applies brakes and parking, and backstops dead
-   dispatches.
+2. Run `bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh` **exactly
+   once, right after each dispatch**. This is the loop's advance/condition step — it
+   **mutates** state (advances the budget on a real iteration, applies brakes/parking,
+   backstops a dead dispatch). It is NOT a status peek: to inspect state without advancing
+   the loop, use `/speckit-devflow-status` (read-only). Never call loop-status before the
+   first dispatch or "to check" — one dispatch, one loop-status.
 3. Give the user a one-line pulse: `iter N/budget · task · outcome · parked: [...]`.
    **attended-step mode:** STOP and ask before the next dispatch.
 4. While its JSON says `"continue": true` → repeat from 1.

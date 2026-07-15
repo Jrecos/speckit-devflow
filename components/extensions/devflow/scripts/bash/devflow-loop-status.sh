@@ -32,8 +32,16 @@ for t, n in state["attempts"].items():
         state["parked"].append(t)
 pickable = [t for t in open_tasks if t not in state["parked"]]
 
-# --- budget bookkeeping: one call per loop pass ---
-state["budget"]["used"] = state["budget"].get("used", 0) + 1
+# --- budget bookkeeping: count a pass ONLY when an iteration actually advanced.
+# Keyed to `iteration`, not to how many times this script is called — so a spurious or
+# out-of-order call (e.g. a "peek" before the first dispatch, or the orchestrator calling
+# it twice) cannot inflate the budget or burn the leash. A dispatch that opened then failed
+# still counts (iterate bumps `iteration` at open). Live-run finding, 2026-07-15.
+iter_now = state.get("iteration", 0)
+last_counted = state["budget"].get("last_counted_iteration", 0)
+if iter_now > last_counted:
+    state["budget"]["used"] = state["budget"].get("used", 0) + 1
+    state["budget"]["last_counted_iteration"] = iter_now
 
 # --- brakes ---
 reason = None

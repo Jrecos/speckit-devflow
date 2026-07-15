@@ -872,7 +872,7 @@ print(json.dumps({
 PY
 ```
 
-> **Budget semantics note:** `budget.used` counts loop passes (one per dispatch), incremented here — not by iterate — so failed dispatches still spend budget (that's the point of a leash).
+> **Budget semantics note:** `budget.used` is incremented here (in loop-status, a script — layer 2), not in the iterate prompt. Refined 2026-07-15 (live-run finding): keyed to **iteration advancement** (`budget.last_counted_iteration`), not to call count — a spurious/out-of-order loop-status call (an inspection peek, or the orchestrator calling it early) cannot inflate the budget. A dispatch that opened then failed still counts (iterate bumps `iteration` at open). Inspect state with the read-only `/speckit-devflow-status`, never loop-status.
 
 - [ ] **Step 4: Run test to verify it passes** → Expected: PASS line
 

@@ -33,6 +33,21 @@ the whole class before a user does:
 
 All shipped behavior-identical or additive; the acceptance suite went 14 → 20 tests.
 
+## Shipped — v0.2.1 (authority order + machinery preflight)
+
+Driven by the loop-methods deep analysis (`docs/research/loop-methods-analysis.md`) and
+dogfood finding 9:
+
+- **Authority order** (ADR-0024): `user decision > spec.md > tests > current code` at four
+  surfaces (iterate standing rule + `CONFLICT:` RED-close artifact, judge fallback rule 4,
+  checker changed-test rule, verify verdict-reading exception). Closes the one case where the
+  loop failed *coordinately* — a wrong test. Frozen by test-15; live-proven by
+  `evals/cases/iterate-authority-conflict/` (1/1 pass live, 1/1 red on `--revert`).
+- **Machinery preflight** (finding 9): `devflow-preflight.sh` blocks loop entry in a degraded
+  working tree (detection, test-21) + the CLAUDE.md protocol's worktree discipline — the
+  DevFlow checkout never switches branches; other-branch work in a separate `git worktree`
+  (prevention, test-15). Suite 20 → 21 tests; ADRs 0001–0024.
+
 ---
 
 ## Candidate improvements (still unbuilt — ranked by current gut, re-ranked by evidence)

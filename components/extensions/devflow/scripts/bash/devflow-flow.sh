@@ -13,6 +13,10 @@ set -euo pipefail
 cd "${CLAUDE_PROJECT_DIR:-.}"
 
 CMD="${1:?usage: devflow-flow.sh init|start|complete|status|next ...}"; shift || true
+# Machinery preflight (finding 9): the ledger must never be created in a degraded tree.
+if [ "$CMD" = "init" ]; then
+  bash .specify/extensions/devflow/scripts/bash/devflow-preflight.sh >/dev/null
+fi
 FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 FLOW="$FDIR/devflow-flow.json"
 

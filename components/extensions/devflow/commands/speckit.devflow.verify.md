@@ -36,6 +36,9 @@ description: "Runs the DevFlow Verify phase — full test suite plus a judge ver
      if the suite is green it is covered by the primary oracle. Record such notes, but a
      FAIL that rests only on outside-diff / test-covered criteria is a scope artifact:
      say so explicitly in the report's Reason and Recommendation so STOP #2 has the truth.
+     The exception is the authority order (ADR-0024): a FAIL because the diff changed or
+     deleted a test in a way that contradicts spec.md is a REAL defect — spec beats
+     tests; never discount it as a scope artifact.
 5. **Deviations**: compare implementation against spec.md; note every behavior that
    differs from the contract text, even where tests pass.
 6. **Write `<fdir>/verify-report.md`** (REQUIRED, exactly this shape — stop2-prep

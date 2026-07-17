@@ -283,9 +283,9 @@ components/
                                   countable task format with per-task acceptance criteria
   workflows/devflow/              the pipeline: gates, loops (unrolled review cycles ×2),
                                   switch routing, clean-park semantics
-tests/acceptance/                 20 automated tests + MANUAL.md (live-Claude checklist)
+tests/acceptance/                 21 automated tests + MANUAL.md (live-Claude checklist)
 docs/
-  decisions/                      ADRs 0001–0023 — every design decision, including the
+  decisions/                      ADRs 0001–0024 — every design decision, including the
                                   three-agent verification pass that corrected the design
   superpowers/specs/              the approved design spec
   research/                       the cited loop-architecture research this is built on
@@ -304,9 +304,9 @@ the spec and found what tests couldn't; all findings fixed.
 
 ## Status
 
-- [x] Research → blueprint → 23 ADRs → approved spec
+- [x] Research → blueprint → 24 ADRs → approved spec
 - [x] Components authored (extension · workflow · preset) + final `bundle.yml`
-- [x] `specify bundle validate` ✓ · `build` ✓ · **20/20 automated acceptance tests**
+- [x] `specify bundle validate` ✓ · `build` ✓ · **21/21 automated acceptance tests**
 - [ ] Live-Claude dogfood run ([`tests/acceptance/MANUAL.md`](tests/acceptance/MANUAL.md))
 - [ ] Catalog publication
 

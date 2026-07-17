@@ -4,7 +4,7 @@ Where the bundle is going and what real runs have taught us. Two lists: **candid
 improvements** (ideas earning their priority from evidence, not memory) and the
 **dogfood findings log** (concrete issues real runs surfaced, and what was done).
 
-Principle (from the runs themselves): the architecture is proven (20 automated tests, the
+Principle (from the runs themselves): the architecture is proven (21 automated tests, the
 three-layer model holds). What sets priority is **runs, not features** — a candidate gets
 promoted when a pain repeats across features, not on first sighting. Premature harness-
 building is the "orchestration over interface" trap the research warned against.
@@ -86,7 +86,8 @@ one constructible landing), driven by `/speckit-devflow-start`, 2026-07-15.
 | 5 | Review/verify diff scoping used `merge-base dev..HEAD`; on a branch stacked off an unmerged feature (004 off 003) that base was stale → 170 files / 12k lines of prior-feature churn, not 004's surface. Agent had to hand-scope. | script + prompt | init stamps `base_commit = HEAD` **once at loop start**; review.md + verify.md diff `base_commit..HEAD` (deterministic, topology-proof) with a first-touch fallback for old state | `3d58be6` |
 | 6 | Verify judge returned **FAIL** on two criteria it could not confirm — `PageIcon kind="voltpulse"` and `.dash-card-title` live in *unchanged* files (added in S1), invisible in the diff. A green 36/36 suite already proved them. Per ADR-0016 the FAIL parked to STOP #2 (design worked), but it was a **scope false-negative** that forced a human decision. | script + prompt | judge fallback prompt rewritten (ADR-0003): tests are the primary oracle, do NOT FAIL for code outside the diff or already covered by a green suite — FAIL only for defects *in* the diff or subjective-quality gaps; verify.md/iterate.md now prepend a `TESTS:` line to the criteria so the judge can weigh the oracle | `3d58be6` |
 | 7 | Review's mechanical Semgrep pass was unavailable: the standalone `semgrep-mcp` uvx package (which finding #1's onboard line installed) is **deprecated** — the MCP server moved into the `semgrep` binary, so the old server now only returns a deprecation notice, not scan tools. Review had no dataflow/taint pass. | prompt | onboard registers the **built-in** server (`claude mcp add semgrep … -- semgrep mcp -t stdio`), drops the dead `uvx semgrep-mcp`/`--semgrep-path`; review.md treats a notice-only server as "unavailable"; adoption-guide troubleshooting row updated | `86ed4b5` |
-| 8 | **The v0.2.0 self-release** 403'd at the push: `release.sh` ran `gh auth setup-git` but never ensured the *right* account was active, and a shell profile re-sets the active gh account to a different org account on every new shell — so the release run (one shell) inherited the wrong account. All 20 tests/build/smoke had passed; the commit + tag were made; only the push failed (clean recoverable state, nothing published). | release tooling | `release.sh` now switches to the repo-owner account (`${GH_REPO%%/*}`) for the push, **forces** gh's credential helper (`-c 'credential.helper=!gh auth git-credential'`) so a stale keychain token can't win, and restores the prior active account on exit; troubleshooting row updated | *(this change)* |
+| 8 | **The v0.2.0 self-release** 403'd at the push: `release.sh` ran `gh auth setup-git` but never ensured the *right* account was active, and a shell profile re-sets the active gh account to a different org account on every new shell — so the release run (one shell) inherited the wrong account. All 20 tests/build/smoke had passed; the commit + tag were made; only the push failed (clean recoverable state, nothing published). | release tooling | `release.sh` now switches to the repo-owner account (`${GH_REPO%%/*}`) for the push, **forces** gh's credential helper (`-c 'credential.helper=!gh auth git-credential'`) so a stale keychain token can't win, and restores the prior active account on exit; troubleshooting row updated | `512d3b1` |
+| 9 | **A session ran silently degraded** (observed in a konexo/voltpulse session, 2026-07-17, on spec-kit machinery of the same shape as ours): the working tree sat on a `promote/*` branch that doesn't carry `.claude/skills/`, so the rendered skill layer and the current CLAUDE.md were simply *absent* — every command kept "working" without its machinery, and only a human noticed. DevFlow had the same hole: nothing verified the loop's own assets exist before starting. | script | `devflow-preflight.sh` — mechanical assert (config, core scripts, checker agent, all 9 rendered commands in either `.claude/skills/` or `.claude/commands/` form) wired into `devflow-init.sh` and `devflow-flow.sh init`; a degraded tree now **blocks loudly** at loop entry instead of running without guarantees; behavior-tested by test-21 | *(this change)* |
 
 **All 7 findings' prompt/script fixes shipped in v0.1.2** (the fast patch, cut via the new
 `release.sh`). The larger machinery they motivated shipped in **v0.2.0** (see Shipped above).
@@ -111,6 +112,23 @@ machine" smoke check as part of release, not just the offline acceptance suite.
 modes (`-k post-tool-cli-scan`, `stop-cli-scan`, `inject-secure-defaults`). That maps
 directly onto DevFlow's layer-2 hook seam — a candidate for moving the Semgrep pass from a
 Review-time prompt step to a guaranteed PostTool/Stop hook. Watch, don't build yet.
+
+Finding 9 is a **fourth class: working-tree / asset-integrity drift** — distinct from
+finding 7's upstream drift. The assets can be correct *and installed* yet absent from the
+tree you're standing in (branch topology, partial checkouts, un-onboarded clones), and
+prompt-layer machinery degrades silently because prose can't notice its own absence
+(exactly the forced-artifact boundary documented in `docs/research/loop-methods-analysis.md`:
+models reliably annotate actions they take, and reliably fail to notice what's missing).
+The fix is the pattern ADR-0010 prescribes: a mechanical existence gate at loop entry.
+
+**Adopted from the loop-methods deep analysis** (`docs/research/loop-methods-analysis.md`,
+2026-07-17): the **authority order** `user decision > spec.md > tests > current code`
+(ADR-0024) — the one external technique with a measured failure at our own model tier.
+Stated at four surfaces (iterate standing rule + CONFLICT: RED-close artifact, judge
+fallback rule 4, checker changed-test rule, verify verdict-reading exception), frozen by
+test-15, behavior-tested by `evals/cases/iterate-authority-conflict/`. Its watch-list
+survivors (cost sidecar, gate-integrity write-boundary, TWINS line, tier eval matrix)
+stay in that document with named triggers — build on evidence, per the principle above.
 
 **Process rule — now enforced, not just adopted:** a release = bump manifest versions **and**
 tag **and** re-upload assets, then verify a clean install reports the new number — atomically,

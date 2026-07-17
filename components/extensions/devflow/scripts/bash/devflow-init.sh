@@ -2,6 +2,9 @@
 # Initialize (or refresh) DevFlow loop state for the current feature.
 set -euo pipefail
 cd "${CLAUDE_PROJECT_DIR:-.}"
+# Machinery preflight (finding 9): refuse to start the loop in a working tree that is
+# missing rendered assets (branch without .claude/skills|commands, checker, scripts).
+bash .specify/extensions/devflow/scripts/bash/devflow-preflight.sh >/dev/null
 MODE="${1:-attended}"
 FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 mkdir -p "$FDIR/loop" "$FDIR/review" .specify/devflow docs/decisions

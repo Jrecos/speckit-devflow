@@ -12,9 +12,11 @@ REVIEW="$CMDS/speckit.devflow.review.md"
 VERIFY="$CMDS/speckit.devflow.verify.md"
 ITERATE="$CMDS/speckit.devflow.iterate.md"
 CAPTURE="$CMDS/speckit.devflow.capture.md"
+JUDGE_SH="$REPO_ROOT/components/extensions/devflow/scripts/bash/devflow-judge.sh"
+CHECKER="$REPO_ROOT/components/extensions/devflow/assets/claude/agents/devflow-checker.md"
 
-for f in "$ONBOARD" "$START" "$REVIEW" "$VERIFY" "$ITERATE" "$CAPTURE"; do
-  [ -f "$f" ] || fail "missing command doc: $f"
+for f in "$ONBOARD" "$START" "$REVIEW" "$VERIFY" "$ITERATE" "$CAPTURE" "$JUDGE_SH" "$CHECKER"; do
+  [ -f "$f" ] || fail "missing prompt surface: $f"
 done
 
 # --- findings 1 & 7: onboard's semgrep registration -------------------------------------
@@ -58,4 +60,16 @@ grep -q 'devflow-diff-surface.sh first-commit' "$CAPTURE" || fail "finding 5: ca
 grep -q 'devflow-judge-prep.sh --diff feature' "$VERIFY"  || fail "finding 6: verify.md no longer assembles the judge criteria via devflow-judge-prep.sh (TESTS: oracle line)"
 grep -q 'devflow-judge-prep.sh --diff working' "$ITERATE" || fail "finding 6: iterate.md no longer assembles the judge criteria via devflow-judge-prep.sh (TESTS: oracle line)"
 
-pass "prompt-regression net: 7 findings guarded"
+# --- ADR-0024: authority order (user > spec > tests > code) across all four surfaces -----
+# Fix: a wrong test is the one case where the whole chain fails coordinately (maker
+# satisfies it, judge sees TESTS green, gate commits). The order + a conflict artifact at
+# the action point (CONFLICT: failure note riding the existing RED close) breaks that.
+grep -q 'Authority order'                        "$ITERATE" || fail "ADR-0024: iterate.md dropped the authority-order standing rule"
+grep -q 'user decision > spec.md > tests > current code' "$ITERATE" || fail "ADR-0024: iterate.md dropped the authority ordering itself"
+grep -q 'CONFLICT: test'                         "$ITERATE" || fail "ADR-0024: iterate.md dropped the CONFLICT: failure-note artifact for spec-vs-test conflicts"
+grep -q 'authority order (ADR-0024)'             "$JUDGE_SH" || fail "ADR-0024: judge fallback prompt dropped the authority-order clause"
+grep -q 'CHANGES or DELETES a test'              "$JUDGE_SH" || fail "ADR-0024: judge fallback prompt no longer scopes the spec-beats-tests rule to in-diff test changes (finding-6 guard)"
+grep -q 'changed or deleted test'                "$CHECKER"  || fail "ADR-0024: checker dropped the changed-test-is-suspect rule"
+grep -q 'authority order (ADR-0024)'             "$VERIFY"   || fail "ADR-0024: verify.md dropped the spec-beats-tests exception in verdict reading"
+
+pass "prompt-regression net: 7 findings + ADR-0024 guarded"

@@ -38,13 +38,22 @@ EOF
   )
 }
 
-# Install devflow scripts+config into a scratch project (simulating extension install)
+# Install devflow scripts+config into a scratch project (simulating extension install).
+# Mirrors a REAL install (scripts + config + checker agent + rendered commands) so the
+# machinery preflight (finding 9) passes on an intact fixture — and fails when a test
+# deliberately removes a piece.
 install_devflow_assets() {
   local dir="$1"
-  mkdir -p "$dir/.specify/extensions/devflow"
+  mkdir -p "$dir/.specify/extensions/devflow" "$dir/.claude/agents" "$dir/.claude/commands"
   cp -R "$REPO_ROOT/components/extensions/devflow/scripts" "$dir/.specify/extensions/devflow/"
   cp "$REPO_ROOT/components/extensions/devflow/config-template.yml" \
      "$dir/.specify/extensions/devflow/devflow-config.yml"
+  cp "$REPO_ROOT/components/extensions/devflow/assets/claude/agents/devflow-checker.md" \
+     "$dir/.claude/agents/"
+  local f
+  for f in "$REPO_ROOT/components/extensions/devflow/commands/"*.md; do
+    cp "$f" "$dir/.claude/commands/$(basename "$f" .md | tr '.' '-').md"
+  done
   chmod +x "$dir/.specify/extensions/devflow/scripts/bash/"*.sh
 }
 

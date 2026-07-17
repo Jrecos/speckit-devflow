@@ -13,6 +13,9 @@ description: "Runs exactly ONE DevFlow build-loop iteration: picks one task from
   never in this conversation.
 - The Stop gate blocks any session end that is not a valid GREEN or RED close.
   If it blocks you, do what its message says — never work around it.
+- **Authority order** (ADR-0024): `user decision > spec.md > tests > current code`.
+  "Make scoped tests green" never promotes a test above the spec: a test is an
+  oracle only while it agrees with spec.md.
 
 ## Progress checklist (copy into your response; check off as you go)
 
@@ -35,7 +38,8 @@ description: "Runs exactly ONE DevFlow build-loop iteration: picks one task from
    read `<fdir>/loop/state.json`, `<fdir>/tasks.md`, `<fdir>/spec.md`,
    `.specify/extensions/devflow/devflow-config.yml`.
    *If `feature.json` or `state.json` is missing:* STOP and report — the workflow's
-   init step has not run; do not create them yourself.
+   init step has not run; do not create them yourself. (Init also runs the machinery
+   preflight — `devflow-preflight.sh` — so a degraded working tree fails loudly there.)
 
 2. **Open the iteration** — run exactly:
    `bash .specify/extensions/devflow/scripts/bash/devflow-open-iteration.sh`
@@ -62,6 +66,11 @@ description: "Runs exactly ONE DevFlow build-loop iteration: picks one task from
    in the decision record later; do NOT fix them now.
 
 5. **Scoped tests** — run the `commands.test_scoped` command from devflow-config.yml.
+   - Before **editing any existing test**, its justification must trace to a spec.md
+     section (or this task's `AC:`). If a failing test **contradicts spec.md**, do NOT
+     satisfy the test and do NOT rewrite the spec — take the RED close below with the
+     failure note `CONFLICT: test <name> expects <X>; spec §<section> says <Y>`; the
+     human resolves it at the STOP (ADR-0024 authority order).
    - **Green** → step 6.
    - **Red after honest effort within this session** → take the **RED close**:
      `python3 STATE_PY set STATE iteration_outcome '"failed"'` and

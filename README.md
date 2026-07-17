@@ -89,11 +89,25 @@ ship stale ([ADR-0016](docs/decisions/0016-verification-corrections.md)).
 
 ## Quick start
 
-### Consumers
+### Install (from the GitHub release)
+
+DevFlow isn't in a public catalog yet, so install its components straight from the release —
+`latest/download/` always resolves to the newest tag:
 
 ```bash
-specify bundle install devflow          # extensions (git, superspec, devflow) + preset + workflow
-claude                                  # then, inside your project:
+BASE=https://github.com/Jrecos/speckit-devflow/releases/latest/download
+specify extension add git                                    # upstream primitive (catalog)
+specify extension add superspec                              # upstream primitive (catalog)
+specify extension add devflow --from "$BASE/devflow-extension.zip"
+specify preset add     --from "$BASE/devflow-plan-hardening.zip"
+specify workflow add   "$BASE/devflow-workflow.yml"
+```
+
+*(Once DevFlow is published to a catalog, `specify bundle install devflow` will pull all of
+the above in one step.)* Then, inside your project:
+
+```bash
+claude
 /speckit-devflow-onboard                # validates tools, adds semgrep MCP, installs hooks pack,
                                         # checker subagent, CLAUDE.md protocol; smoke-tests the judge
 
@@ -101,6 +115,24 @@ export DEVFLOW_JUDGE_CMD='<your cross-family judge command>'   # optional but re
                                         # unset = Claude judges Claude (same-family fallback,
                                         # warns every run; ADR-0018)
 ```
+
+### Updating
+
+A new release out? Re-add the three components from `latest`. `--force` on the extension
+overwrites the install but **preserves your `devflow-config.yml`** (your onboard settings):
+
+```bash
+BASE=https://github.com/Jrecos/speckit-devflow/releases/latest/download
+specify extension add devflow --from "$BASE/devflow-extension.zip" --force
+specify preset add     --from "$BASE/devflow-plan-hardening.zip"   # confirm overwrite (y)
+specify workflow add   "$BASE/devflow-workflow.yml"                # confirm overwrite (y)
+specify extension list                                             # verify the new version
+```
+
+> Updating from **before v0.1.2**? Re-run `/speckit-devflow-onboard` afterward — your
+> project's `.mcp.json` was written by the old onboard (deprecated `uvx semgrep-mcp`); the
+> new onboard registers the built-in `semgrep mcp -t stdio` server. `specify extension update`
+> won't work here — it resolves against a catalog, and DevFlow installs by URL.
 
 Then run a feature **either way** — same protocol, same gates, same scripts underneath:
 

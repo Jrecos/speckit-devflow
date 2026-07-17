@@ -59,7 +59,7 @@ specify workflow add "$BASE/devflow-workflow.yml"
 ```
 
 To pin a specific version instead, swap `latest/download` for
-`download/v0.1.1` (or any tag).
+`download/v0.2.0` (or any tag).
 
 **(b) From a local clone** (recommended if you'll be editing DevFlow itself). Set
 `DEVFLOW` to your clone path first — an unset variable is why
@@ -77,6 +77,25 @@ specify workflow add "$DEVFLOW/components/workflows/devflow/workflow.yml"
 > asks "Continue with installation? [y/N]" — answer **y** to both. If any sub-command
 > rejects a flag, run it with `--help` — the CLI evolves. The forms above are verified
 > against 0.12.11 (the release path was installed end-to-end into a clean project).
+
+### Updating DevFlow later
+
+When a new release lands, re-add the three components from `latest` (it auto-resolves to the
+newest tag). `--force` on the extension overwrites the install but **preserves your
+`devflow-config.yml`** (the lint/test/typecheck commands onboard detected):
+
+```bash
+BASE=https://github.com/Jrecos/speckit-devflow/releases/latest/download
+specify extension add devflow --from "$BASE/devflow-extension.zip" --force
+specify preset add     --from "$BASE/devflow-plan-hardening.zip"   # confirm overwrite (y)
+specify workflow add   "$BASE/devflow-workflow.yml"                # confirm overwrite (y)
+specify extension list                                             # verify the new version
+```
+
+Updating from **before v0.1.2**? Re-run `/speckit-devflow-onboard` (step 3) afterward — your
+project's `.mcp.json` was written by the old onboard (deprecated `uvx semgrep-mcp`), and the
+new onboard registers the built-in `semgrep mcp -t stdio` server. Note: `specify extension
+update` targets a catalog, so it won't update a URL-installed DevFlow — always re-`add --force`.
 
 ## 3 · Onboard the project
 

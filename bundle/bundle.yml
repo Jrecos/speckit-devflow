@@ -3,7 +3,7 @@ schema_version: "1.0"
 bundle:
   id: devflow
   name: DevFlow
-  version: 0.2.0
+  version: 0.2.1
   role: developer
   description: >-
     Autonomous, spec-driven development workflow: two human STOPs, a one-task-per-iteration
@@ -28,15 +28,15 @@ provides:
     - id: superspec
       version: "1.0.1"
     - id: devflow
-      version: "0.2.0"
+      version: "0.2.1"
   presets:
     - id: devflow-plan-hardening
-      version: "0.2.0"
+      version: "0.2.1"
       priority: 10
       strategy: replace   # the preset's templates ARE full lean-style replacements (provides.templates[].replaces)
   steps: []
   workflows:
     - id: devflow
-      version: "0.2.0"
+      version: "0.2.1"
 
 tags: [development, autonomous, spec-driven, verification, knowledge-base]

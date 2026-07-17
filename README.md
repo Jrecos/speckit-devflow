@@ -253,7 +253,7 @@ specify preset add --dev components/presets/devflow-plan-hardening
 specify workflow add components/workflows/devflow/workflow.yml
 
 specify bundle validate --path bundle     # ✓
-specify bundle build --path bundle --output dist   # → devflow-0.2.0.zip
+specify bundle build --path bundle --output dist   # → devflow-0.2.1.zip
 
 bash tests/acceptance/run-all.sh          # 20 automated tests
 # + tests/acceptance/MANUAL.md            # 6 live-Claude checks

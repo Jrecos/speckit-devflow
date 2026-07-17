@@ -9,7 +9,7 @@ specify preset add --dev "$REPO_ROOT/components/presets/devflow-plan-hardening" 
 specify workflow add "$REPO_ROOT/components/workflows/devflow/workflow.yml" >/dev/null || fail "workflow install"
 cp -R "$REPO_ROOT/bundle" ./bundle
 specify bundle build --path ./bundle --output ./dist || fail "bundle build"
-ls dist/devflow-0.2.0.zip >/dev/null || fail "artifact missing"
+ls dist/devflow-0.2.1.zip >/dev/null || fail "artifact missing"
 
 # §6-2 second half: install idempotency + §5 footprint. Components are already installed
 # (--dev above), so `bundle install` must skip/refresh without changing the footprint.

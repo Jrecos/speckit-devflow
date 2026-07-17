@@ -14,8 +14,9 @@ ITERATE="$CMDS/speckit.devflow.iterate.md"
 CAPTURE="$CMDS/speckit.devflow.capture.md"
 JUDGE_SH="$REPO_ROOT/components/extensions/devflow/scripts/bash/devflow-judge.sh"
 CHECKER="$REPO_ROOT/components/extensions/devflow/assets/claude/agents/devflow-checker.md"
+PROTOCOL="$REPO_ROOT/components/extensions/devflow/assets/claude/claude-md-protocol.md"
 
-for f in "$ONBOARD" "$START" "$REVIEW" "$VERIFY" "$ITERATE" "$CAPTURE" "$JUDGE_SH" "$CHECKER"; do
+for f in "$ONBOARD" "$START" "$REVIEW" "$VERIFY" "$ITERATE" "$CAPTURE" "$JUDGE_SH" "$CHECKER" "$PROTOCOL"; do
   [ -f "$f" ] || fail "missing prompt surface: $f"
 done
 
@@ -72,4 +73,13 @@ grep -q 'CHANGES or DELETES a test'              "$JUDGE_SH" || fail "ADR-0024: 
 grep -q 'changed or deleted test'                "$CHECKER"  || fail "ADR-0024: checker dropped the changed-test-is-suspect rule"
 grep -q 'authority order (ADR-0024)'             "$VERIFY"   || fail "ADR-0024: verify.md dropped the spec-beats-tests exception in verdict reading"
 
-pass "prompt-regression net: 7 findings + ADR-0024 guarded"
+# --- finding 9: worktree discipline — the checkout carrying DevFlow never switches away ---
+# Prevention half of finding 9 (the preflight is the detection half, test-21): the CLAUDE.md
+# protocol block forbids branch-switching in the DevFlow checkout and routes other-branch
+# work to a separate git worktree.
+grep -q 'git worktree'  "$PROTOCOL" || fail "finding 9: CLAUDE.md protocol dropped the worktree rule for other-branch work"
+grep -qi 'NEVER .*checkout' "$PROTOCOL" || fail "finding 9: CLAUDE.md protocol dropped the never-switch-branches rule"
+grep -q 'git worktree'  "$REPO_ROOT/components/extensions/devflow/scripts/bash/devflow-preflight.sh" \
+  || fail "finding 9: preflight block message no longer points at the worktree fix"
+
+pass "prompt-regression net: 7 findings + ADR-0024 + finding-9 worktree rule guarded"

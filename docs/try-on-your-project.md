@@ -184,6 +184,7 @@ The [complete phase-by-phase reference](development-workflow.md) has the full ta
 | superspec brainstorm feels thin | superspec bridges to obra/superpowers skills; install those, or lean on `/speckit-clarify`. |
 | semgrep MCP only shows a "deprecated / moved to the semgrep binary" notice, or won't start | The standalone `semgrep-mcp` uvx package is deprecated — the MCP server now ships **inside** the `semgrep` binary. Remove any old registration (`claude mcp remove semgrep`) and re-add the built-in one: `claude mcp add semgrep -s project -e SEMGREP_SEND_METRICS=off -- semgrep mcp -t stdio` (there's no `--metrics` flag; use the env var). Need a recent CLI — `uv tool upgrade semgrep` if `semgrep mcp --help` fails. Onboard now does this; `.mcp.json` is per-clone. |
 | A task keeps failing | it parks after 2 attempts and the loop moves on; you triage it at STOP #2 with its failure history. |
+| `devflow-preflight: BLOCKED — the working tree is missing DevFlow machinery` | You (or the agent) switched this checkout to a branch that doesn't carry the rendered assets (`.claude/skills/`, `.claude/agents/`, scripts) — they're written at install time, not always committed. Return the checkout to the branch that has them; do other-branch work in a **separate `git worktree add`** so the DevFlow checkout never switches away. The block is the fix working (finding 9): before it, the loop ran silently degraded. |
 
 ## 8 · Known v0.1 limitations (so nothing surprises you)
 

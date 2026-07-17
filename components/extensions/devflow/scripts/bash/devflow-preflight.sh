@@ -47,9 +47,10 @@ if [ "${#missing[@]}" -gt 0 ]; then
     echo "devflow-preflight: BLOCKED — the working tree is missing DevFlow machinery:"
     printf '  - %s\n' "${missing[@]}"
     echo "Likely cause: this branch/checkout does not carry the rendered assets (they are"
-    echo "written at install time, not always committed). Fix: switch to the branch that has"
-    echo "them, or re-run the install (specify extension add … + /speckit-devflow-onboard)."
-    echo "Do NOT run the loop degraded."
+    echo "written at install time, not always committed). Fix: return this checkout to the"
+    echo "branch that has them and do other-branch work in a separate 'git worktree add'"
+    echo "(the DevFlow checkout should never switch away), or re-run the install"
+    echo "(specify extension add … + /speckit-devflow-onboard). Do NOT run the loop degraded."
   } >&2
   exit 1
 fi

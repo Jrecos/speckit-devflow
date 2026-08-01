@@ -61,9 +61,33 @@ description: "Runs exactly ONE DevFlow build-loop iteration: picks one task from
      "no pickable task"; the loop-status brake will end the loop.
 
 4. **Implement** the one task. Prefer whole-file writes over fragile partial edits.
-   The PostToolUse hook lints/typechecks after every Edit/Write — when it reports
-   errors, fix them immediately before continuing. Notice other problems? Note them
-   in the decision record later; do NOT fix them now.
+   A local maker may do the typing for you (ADR-0025); you always apply the result and
+   keep the guarantees. Resolve the maker for this task's escalation tier and run it:
+
+   ```
+   MODEL=$(bash .specify/extensions/devflow/scripts/bash/devflow-escalate.sh tier <task-id>)
+   PAYLOAD=$(bash .specify/extensions/devflow/scripts/bash/devflow-maker-prep.sh \
+       --task-id <task-id> --instruction "<direct, explicit imperative>" \
+       --criteria-file <ac> --slice-file <spec-slice> \
+       --files <comma-sep existing paths> [--new-files <comma-sep new paths>])
+   DEVFLOW_PI_MODEL="$MODEL" bash .specify/extensions/devflow/scripts/bash/devflow-maker.sh "$PAYLOAD"
+   ```
+
+   Route on the exit code:
+   - **exit 0** → the maker printed `{"files":[{path,content}]}`. Apply EACH file with your
+     **Write tool** (whole-file). Your Write is what fires the PostToolUse lint/typecheck hook
+     and sits inside the Stop-gate close — the maker never touches disk itself.
+   - **exit 3** → no maker configured (or the tier is the last, `claude`, or its backend is
+     down). **Type the implementation yourself** — this is the Claude-sufficient path, nothing
+     is lost.
+   - **exit 1** → the maker ran but produced bad/unsafe output (the seam already rejected
+     continuity regressions and unseen-path writes). Treat it as a failed implementation for
+     this attempt: take the **RED close** (step 5's else-branch) with a failure note; the next
+     dispatch retries this task one escalation tier higher (attempts drives the tier, ADR-0026).
+
+   The PostToolUse hook lints/typechecks after every Edit/Write — when it reports errors, fix
+   them immediately before continuing. Notice other problems? Note them in the decision record
+   later; do NOT fix them now.
 
 5. **Scoped tests** — run the `commands.test_scoped` command from devflow-config.yml.
    - Before **editing any existing test**, its justification must trace to a spec.md

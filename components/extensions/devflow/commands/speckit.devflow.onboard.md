@@ -18,7 +18,8 @@ description: "Validates and installs every DevFlow prerequisite at project scope
 - [ ] 2. semgrep MCP  - [ ] 7. CLAUDE.md protocol
 - [ ] 3. commands     - [ ] 8. dispatch sanity
 - [ ] 4. judge seam   - [ ] 9. script permissions
-- [ ] 5. hooks pack   - [ ] 10. gitignore
+- [ ] 4b. maker seam  - [ ] 10. gitignore
+- [ ] 5. hooks pack
 ```
 
 ## Steps
@@ -56,6 +57,18 @@ description: "Validates and installs every DevFlow prerequisite at project scope
      at any cross-family model."* Checklist: `judge ⚠ fallback (same-family)`.
    - Only if neither the env var nor a `claude` CLI resolves: `judge ✗` (loop
      cannot run).
+4b. **Maker seam** (ADR-0025): is `DEVFLOW_MAKER_CMD` set?
+   - **Set** → smoke-test: build a trivial payload with
+     `bash .specify/extensions/devflow/scripts/bash/devflow-maker-prep.sh --task-id SMOKE
+     --instruction "return {\"files\":[]}" --criteria-file <c> --slice-file <s>` and feed it to
+     `bash .specify/extensions/devflow/scripts/bash/devflow-maker.sh <payload>`; require exit 0
+     with a schema-valid `files` list (or exit 1 that the seam explains — never a crash). Ask
+     what model family stands behind it. Checklist: `maker ✓ (local: <family>)`.
+   - **Unset** → the maker IS Claude (Claude-sufficient, ADR-0020): the caller types the code.
+     This is the exact status quo, not a degradation — no warning needed. Confirm the seam
+     returns exit 3 for the unset case. Checklist: `maker ✓ (Claude-sufficient)`.
+   - Only if set-but-broken (crashes, or never returns valid files nor a clean exit 1):
+     `maker ✗` — fix or unset it before running the loop.
 5. **Hooks pack**: run exactly
    `python3 .specify/extensions/devflow/scripts/python/merge_settings.py .claude/settings.json .specify/extensions/devflow/assets/claude/settings-hooks.json`
    (idempotent merge; prints `merged` or `already-present`).

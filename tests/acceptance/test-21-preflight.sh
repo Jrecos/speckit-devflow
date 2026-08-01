@@ -21,7 +21,7 @@ set +e; err=$(bash "$PRE" 2>&1); rc=$?; set -e
 echo "$err" | grep -q 'speckit-devflow-iterate' || fail "error must name a missing command stem"
 # 2b. skills form satisfies the same stem check (either render form counts)
 mkdir -p .claude/skills
-for st in capture iterate onboard reconcile-contract record-decision review start status verify; do
+for st in brainstorm capture checklist iterate onboard reconcile-contract record-decision review start status verify; do
   mkdir -p ".claude/skills/speckit-devflow-$st"; echo x > ".claude/skills/speckit-devflow-$st/SKILL.md"
 done
 bash "$PRE" >/dev/null || fail "preflight must accept the .claude/skills/ render form"

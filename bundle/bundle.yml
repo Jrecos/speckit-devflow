@@ -22,11 +22,11 @@ requires:
   mcp: [semgrep]
 
 provides:
+  # ADR-0029: DevFlow depends ONLY on spec-kit core. The git.* and superspec.brainstorm behaviors
+  # it used are now internalized (devflow-git.sh; the brainstorm behavior folded into the review/
+  # frame prompts), so neither extension is a provided dependency anymore. git the binary stays a
+  # system prerequisite (requires.tools) — the spec-kit *extension* does not.
   extensions:
-    - id: git
-      version: "1.0.0"
-    - id: superspec
-      version: "1.0.1"
     - id: devflow
       version: "0.3.0"
   presets:

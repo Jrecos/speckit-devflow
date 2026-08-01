@@ -35,7 +35,7 @@ steps:
     integration: "{{ inputs.integration }}"
     input: { args: "{{ inputs.feature }}" }
   - id: brainstorm
-    command: speckit.superspec.brainstorm
+    command: speckit.devflow.brainstorm     # ADR-0029: internalized (was speckit.superspec.brainstorm)
     integration: "{{ inputs.integration }}"
     input: { args: "pressure-test the spec for edge cases and contradictions" }
   - id: clarify
@@ -53,6 +53,13 @@ steps:
     command: speckit.tasks
     integration: "{{ inputs.integration }}"
     input: { args: "" }
+  - id: checklist
+    command: speckit.devflow.checklist   # ADR-0029: plan-validation artifact shown at STOP #1
+    integration: "{{ inputs.integration }}"
+    input: { args: "" }
+  - id: agent-context
+    type: shell
+    run: bash .specify/extensions/devflow/scripts/bash/devflow-agent-context.sh
 
   # ---------- Loop state + leash (feature.json exists only after specify ran) ----------
   - id: init-loop
@@ -227,13 +234,11 @@ steps:
               integration: "{{ inputs.integration }}"
               input: { args: "descope: document parked tasks/findings in the contract" }
         - id: ship-a
-          command: speckit.git.validate
-          integration: "{{ inputs.integration }}"
-          input: { args: "" }
+          type: shell    # ADR-0029: internalized (was speckit.git.validate)
+          run: bash .specify/extensions/devflow/scripts/bash/devflow-git.sh validate
         - id: ship-commit-a
-          command: speckit.git.commit
-          integration: "{{ inputs.integration }}"
-          input: { args: "" }
+          type: shell    # ADR-0029: internalized (was speckit.git.commit)
+          run: 'bash .specify/extensions/devflow/scripts/bash/devflow-git.sh commit "devflow ship feature (accept)"'
         - id: capture-a
           command: speckit.devflow.capture
           integration: "{{ inputs.integration }}"
@@ -244,13 +249,11 @@ steps:
           integration: "{{ inputs.integration }}"
           input: { args: "accepted deviation: update contract text + ADR" }
         - id: ship-b
-          command: speckit.git.validate
-          integration: "{{ inputs.integration }}"
-          input: { args: "" }
+          type: shell    # ADR-0029: internalized (was speckit.git.validate)
+          run: bash .specify/extensions/devflow/scripts/bash/devflow-git.sh validate
         - id: ship-commit-b
-          command: speckit.git.commit
-          integration: "{{ inputs.integration }}"
-          input: { args: "" }
+          type: shell    # ADR-0029: internalized (was speckit.git.commit)
+          run: 'bash .specify/extensions/devflow/scripts/bash/devflow-git.sh commit "devflow ship feature (accept-with-deviation)"'
         - id: capture-b
           command: speckit.devflow.capture
           integration: "{{ inputs.integration }}"

@@ -1,6 +1,6 @@
 # ADR-0022: Skills, subagents & memory doctrine — applied, with one deferred lever
 
-**Status:** Accepted
+**Status:** Accepted · **checker model amended (v0.5.0) by [ADR-0031](0031-checker-pinned-to-opus.md)** — the `model: inherit` reasoning below is superseded: the checker is now pinned to `model: opus` (per-task reasoning strength is a distinct axis from the judge's cross-family independence).
 
 **Context:** A deep-research pass on Claude Code *skill/subagent/memory* authoring
 (distinct from command *bodies*, covered by ADR-0021) established the 2025–2026 doctrine.

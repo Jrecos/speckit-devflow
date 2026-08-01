@@ -24,6 +24,12 @@ judge:
 checker:
   role: independent-checker
   independent: true
+  model: opus                  # ADR-0031: the checker is pinned to Opus (strongest reasoning),
+                               # not the session model. This is the per-task adversarial grader —
+                               # the layer most likely to catch behavioral bugs a cheaper local
+                               # maker introduces that thin unit tests miss. The pin lives in the
+                               # subagent frontmatter (assets/claude/agents/devflow-checker.md);
+                               # this key documents intent. Amends ADR-0022's model:inherit choice.
 maker:
   role: local-maker            # resolved by $DEVFLOW_MAKER_CMD in your environment (never committed).
   required: false              # Claude-sufficient (ADR-0020): when DEVFLOW_MAKER_CMD is unset the

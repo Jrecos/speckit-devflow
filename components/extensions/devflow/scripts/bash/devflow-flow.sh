@@ -31,7 +31,7 @@ PHASES = ["frame", "plan", "leash", "analyze", "stop1", "build",
           "reconcile", "ship", "capture"]
 # phases that may be skipped when their entry condition doesn't hold
 SKIPPABLE = {"review-loop", "reconcile"}
-STOPS = {"stop1": ["approve", "reject"],
+STOPS = {"stop1": ["approve", "revise", "reject"],
          "stop2": ["accept", "accept-with-deviation", "reject"]}
 
 def now():
@@ -162,6 +162,22 @@ if cmd == "complete":
         if not decision: die(f"'{phase}' is a human gate: pass --decision <choice> AFTER the human chose")
         if decision not in STOPS[phase]: die(f"'{phase}' decision must be one of {STOPS[phase]}")
         if decision == "reject": die(f"'{phase}' rejected — the pipeline stops here (re-plan or abandon; the ledger keeps the record)")
+        if phase == "stop1" and decision == "revise":
+            # ADR-0030: send the plan back. Re-open the re-plan phases so `start` will re-run them,
+            # then leave stop1 itself pending (the human re-decides after revising). This is the
+            # Path-B equivalent of the engine's revise-loop `while`. Mirror the workflow's --fresh:
+            # the regenerated tasks.md must not inherit per-task state.
+            for p in ("frame", "plan", "leash", "analyze", "stop1"):
+                flow["phases"][p].update(status="pending", at=None, decision=None)
+            sp = os.path.join(fdir, "loop", "state.json")
+            if os.path.exists(sp):
+                st = json.load(open(sp))
+                for k, v in (("attempts", {}), ("parked", []), ("verdicts", {}),
+                             ("failure_notes", {}), ("cycle", 0)):
+                    st[k] = v
+                json.dump(st, open(sp, "w"), indent=2)
+            save(flow); print("devflow-flow: stop1 revise — re-plan phases reopened; re-run from frame")
+            sys.exit(0)
         if phase == "stop1" and decision == "approve":
             # Start the time-box clock AFTER approval, matching the engine driver's
             # start-clock step (workflow.yml) — human deliberation must not eat the box.

@@ -76,10 +76,65 @@ steps:
     input: { args: "" }
   - id: stop1
     type: gate
-    message: "STOP #1 - review the plan, the failing acceptance tests, and the leash below. Approving hands the loop the keys until STOP #2."
+    message: "STOP #1 - review the plan, the failing acceptance tests, and the leash below. approve = hand the loop the keys until STOP #2 · revise = send it back to re-plan · reject = abort."
     show_file: ".specify/devflow/leash.md"
-    options: [approve, reject]
+    options: [approve, revise, reject]
     on_reject: abort
+
+  # ---------- Revise loop (ADR-0030): STOP #1 'revise' sends the plan back for another round ----------
+  # The engine has no goto, but a `while` on the gate's choice is a real revision loop. Body:
+  # re-plan (brainstorm..checklist) -> recompute the leash (revise regenerates tasks.md, so the old
+  # budget is stale) -> re-analyze -> re-gate. The loop condition reads stop1's choice; the in-body
+  # re-gate uses a distinct id (stop1-again, unique) and the condition ORs both so a fresh 'revise'
+  # from either the seed or a later pass keeps the loop going; 'approve'/'reject' end it (reject
+  # aborts at the gate). max_iterations caps runaway revision.
+  - id: revise-loop
+    type: while
+    max_iterations: 5
+    condition: "{{ steps.stop1.output.choice == 'revise' or steps.stop1-again.output.choice == 'revise' }}"
+    steps:
+      - id: revise-brainstorm
+        command: speckit.devflow.brainstorm
+        integration: "{{ inputs.integration }}"
+        input: { args: "revise: re-pressure-test the spec given the reviewer's concerns" }
+      - id: revise-clarify
+        command: speckit.clarify
+        integration: "{{ inputs.integration }}"
+        continue_on_error: true
+        input: { args: "" }
+      - id: revise-plan
+        command: speckit.plan
+        integration: "{{ inputs.integration }}"
+        input: { args: "revise the plan" }
+      - id: revise-tasks
+        command: speckit.tasks
+        integration: "{{ inputs.integration }}"
+        input: { args: "" }
+      - id: revise-checklist
+        command: speckit.devflow.checklist
+        integration: "{{ inputs.integration }}"
+        input: { args: "" }
+      # revise regenerated tasks.md -> reset per-task state (regenerated ids must not inherit old
+      # attempts/parked/verdicts) and recompute the leash from the new task set.
+      - id: revise-reinit
+        type: shell
+        run: bash .specify/extensions/devflow/scripts/bash/devflow-init.sh {{ inputs.mode }} --fresh
+      - id: revise-leash
+        type: shell
+        run: bash .specify/extensions/devflow/scripts/bash/devflow-compute-leash.sh
+      - id: revise-agent-context
+        type: shell
+        run: bash .specify/extensions/devflow/scripts/bash/devflow-agent-context.sh
+      - id: revise-analyze
+        command: speckit.analyze
+        integration: "{{ inputs.integration }}"
+        input: { args: "" }
+      - id: stop1-again
+        type: gate
+        message: "STOP #1 (after revision) - review the revised plan, tests, and leash. approve · revise · reject."
+        show_file: ".specify/devflow/leash.md"
+        options: [approve, revise, reject]
+        on_reject: abort
 
   # The time-box clock starts AFTER approval — init stamped it before Analyze/STOP #1,
   # and a paused-then-resumed gate (the documented non-TTY flow) must not eat the box.

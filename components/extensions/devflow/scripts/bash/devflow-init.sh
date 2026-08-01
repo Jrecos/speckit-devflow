@@ -6,13 +6,18 @@ cd "${CLAUDE_PROJECT_DIR:-.}"
 # missing rendered assets (branch without .claude/skills|commands, checker, scripts).
 bash .specify/extensions/devflow/scripts/bash/devflow-preflight.sh >/dev/null
 MODE="${1:-attended}"
+# --fresh (ADR-0030): a revise round regenerated tasks.md, so task ids may have shifted. Do NOT
+# inherit per-task state (attempts/parked/verdicts/failure_notes) — a new T003 must not carry the
+# old T003's attempts (which would park it prematurely). The budget is recomputed by compute-leash.
+FRESH=0
+for a in "$@"; do [ "$a" = "--fresh" ] && FRESH=1; done
 FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 mkdir -p "$FDIR/loop" "$FDIR/review" .specify/devflow docs/decisions
-python3 - "$FDIR" "$MODE" <<'PY'
+python3 - "$FDIR" "$MODE" "$FRESH" <<'PY'
 import json, sys, os, datetime, re, subprocess
 sys.path.insert(0, ".specify/extensions/devflow/scripts/python")
 import devflow_tasks  # ADR-0023/C5: one definition of the tasks.md count primitives
-fdir, mode = sys.argv[1], sys.argv[2]
+fdir, mode, fresh = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
 path = os.path.join(fdir, "loop", "state.json")
 prev = json.load(open(path)) if os.path.exists(path) else {}
 # Stamp the feature's base commit ONCE at loop start (HEAD before any build commits).
@@ -39,9 +44,11 @@ state = {
   "budget": prev.get("budget", {"used": 0, "total": 0}),
   "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
   "time_box_hours": tb,
-  "attempts": prev.get("attempts", {}), "parked": prev.get("parked", []),
-  "verdicts": prev.get("verdicts", {}), "failure_notes": prev.get("failure_notes", {}),
-  "cycle": prev.get("cycle", 0), "continue": True, "exit_reason": None,
+  "attempts": {} if fresh else prev.get("attempts", {}),
+  "parked": [] if fresh else prev.get("parked", []),
+  "verdicts": {} if fresh else prev.get("verdicts", {}),
+  "failure_notes": {} if fresh else prev.get("failure_notes", {}),
+  "cycle": 0 if fresh else prev.get("cycle", 0), "continue": True, "exit_reason": None,
 }
 json.dump(state, open(path, "w"), indent=2)
 print(f"devflow: state initialized for {fdir} (mode={mode})")

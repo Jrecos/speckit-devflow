@@ -96,8 +96,8 @@ DevFlow isn't in a public catalog yet, so install its components straight from t
 
 ```bash
 BASE=https://github.com/Jrecos/speckit-devflow/releases/latest/download
-specify extension add git                                    # upstream primitive (catalog)
-specify extension add superspec                              # upstream primitive (catalog)
+# ADR-0029: DevFlow's only dependency is spec-kit core. The git.* and superspec behaviors it
+# used are internalized — no separate extensions to add. (git the binary is still a prerequisite.)
 specify extension add devflow --from "$BASE/devflow-extension.zip"
 specify preset add     --from "$BASE/devflow-plan-hardening.zip"
 specify workflow add   "$BASE/devflow-workflow.yml"

@@ -32,7 +32,15 @@ def walk(steps_):
         if s.get("default"): yield from walk(s["default"])
 allsteps = list(walk(steps))
 loops = [s for s in allsteps if s.get("type") == "do-while"]
-assert len(loops) == 3, f"expected build + 2 fix loops, got {len(loops)}"
+# ADR-0028: build-loop + ONE fix-loop (inside the single native review-loop while).
+# Was 3 (build + 2 unrolled fix-loops); the review unroll collapsed to a `while`.
+assert len(loops) == 2, f"expected build + 1 fix loop, got {len(loops)}"
+whiles = {s["id"] for s in allsteps if s.get("type") == "while"}
+# review-loop (ADR-0028) + revise-loop (ADR-0030, STOP#1 revise)
+assert whiles == {"review-loop", "revise-loop"}, f"expected review-loop + revise-loop whiles, got {whiles}"
+# STOP #1 offers approve/revise/reject; the revise-loop condition reads the gate choice
+s1 = find("stop1")
+assert set(s1["options"]) == {"approve", "revise", "reject"}, s1["options"]
 for lp in loops:
     assert isinstance(lp["max_iterations"], int), "max_iterations must be literal int"
     it = next(b for b in lp["steps"] if str(b.get("command", "")).endswith("iterate"))
@@ -62,15 +70,26 @@ cmds = [s for s in allsteps if "command" in s]
 missing = [s["id"] for s in cmds if s.get("integration") != "{{ inputs.integration }}"]
 assert not missing, f"command steps missing integration wiring: {missing}"
 
-# cap-park + accept-with-parked reconcile routing exist (spec §6-9/§6-10 structural halves)
-fix2 = find("fix-cycle-2")
-assert any(x["id"] == "park-findings" for x in fix2["then"]), "park-findings missing from cycle 2"
+# cap-park + accept-with-parked reconcile routing exist (spec §6-9/§6-10 structural halves).
+# ADR-0028: the review loopback is one native `while` (review-loop) capped at review.cycles,
+# with park-findings as a top-level trailing step (was inside the unrolled fix-cycle-2).
+rl = find("review-loop")
+assert rl["type"] == "while", "review-loop must be a native while (ADR-0028)"
+assert isinstance(rl.get("max_iterations"), int) and rl["max_iterations"] >= 1, "review-loop needs an int cap"
+assert any(x["id"] == "park-findings" for x in allsteps), "park-findings (trailing) missing"
+assert not any(s["id"] in ("fix-cycle-1", "fix-cycle-2") for s in allsteps), "unrolled fix-cycles must be gone"
+# gap-D backstop after the build loop (FIX-4): a forced park if the do-while cap exits with continue=true
+assert any(s["id"] == "build-loop-backstop" for s in allsteps), "build-loop-backstop (gap-D) missing"
 accept_case = find("route-stop2")["cases"]["accept"]
 accept_ids = [x["id"] for x in accept_case]
 assert "reconcile-if-parked" in accept_ids and "reconcile-parked" in accept_ids, accept_ids
 
-# time-box clock re-stamps AFTER stop1 (a paused gate must not eat the box)
-assert ids.index("start-clock") == ids.index("stop1") + 1, "start-clock must directly follow stop1"
+# time-box clock re-stamps AFTER stop1's approval (a paused gate must not eat the box). The
+# revise-loop (ADR-0030) sits between stop1 and start-clock; the clock still comes after the
+# revise-loop and before the build loop, so it starts only once the plan is finally approved.
+assert ids.index("start-clock") == ids.index("revise-loop") + 1, "start-clock must follow the revise-loop"
+assert ids.index("revise-loop") == ids.index("stop1") + 1, "revise-loop must directly follow stop1"
+assert ids.index("start-clock") < ids.index("build-loop"), "clock must start before the build loop"
 assert "started_at" in find("start-clock")["run"]
 
 # attended-step: every loop body carries a conditional step-gate (mode comparison in ONE {{ }})

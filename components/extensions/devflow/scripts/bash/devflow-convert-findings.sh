@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "${CLAUDE_PROJECT_DIR:-.}"
-CYCLE="${1:?usage: devflow-convert-findings.sh <cycle>}"
+# Cycle arg is OPTIONAL (ADR-0028): the native `while` review-loop has no loop index, so when the
+# arg is omitted this script derives the cycle by reading+bumping state.cycle itself. An explicit
+# arg (legacy / tests) still wins. Pass "" or nothing to auto-derive.
+CYCLE="${1:-}"
 FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 python3 - "$FDIR" "$CYCLE" <<'PY'
 import json, math, re, sys, datetime
-fdir, cycle = sys.argv[1], int(sys.argv[2])
+fdir, cycle_arg = sys.argv[1], sys.argv[2]
+sp = f"{fdir}/loop/state.json"
+if cycle_arg == "":
+    # auto-derive: this is the (state.cycle + 1)-th review pass
+    _s = json.load(open(sp))
+    cycle = int(_s.get("cycle", 0)) + 1
+else:
+    cycle = int(cycle_arg)
 fj = json.load(open(f"{fdir}/review/findings.json"))
 if fj.get("status") != "findings" or not fj.get("open"):
     print("devflow: findings clean/parked — no conversion")

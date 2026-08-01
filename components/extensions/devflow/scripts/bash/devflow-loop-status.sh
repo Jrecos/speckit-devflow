@@ -5,14 +5,16 @@
 # here — not by iterate — so failed dispatches still spend budget (that's the leash).
 set -euo pipefail
 cd "${CLAUDE_PROJECT_DIR:-.}"
+FORCE_PARK=0
+[ "${1:-}" = "--force-park" ] && FORCE_PARK=1
 FDIR=$(python3 -c 'import json;print(json.load(open(".specify/feature.json"))["feature_directory"])')
 STATE="$FDIR/loop/state.json"
 CFG=".specify/extensions/devflow/devflow-config.yml"
-python3 - "$STATE" "$FDIR/tasks.md" "$CFG" <<'PY'
+python3 - "$STATE" "$FDIR/tasks.md" "$CFG" "$FORCE_PARK" <<'PY'
 import json, re, sys, datetime
 sys.path.insert(0, ".specify/extensions/devflow/scripts/python")
 import devflow_tasks  # ADR-0023/C5
-state_p, tasks_p, cfg_p = sys.argv[1:4]
+state_p, tasks_p, cfg_p, force_park = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1"
 state = json.load(open(state_p))
 cfg = open(cfg_p).read()
 cap = int(re.search(r"max_attempts_per_task:\s*(\d+)", cfg).group(1))
@@ -57,10 +59,17 @@ else:
     if hours >= float(state.get("time_box_hours", 4)):
         reason = "time_box_exceeded"
 
+# --force-park (ADR-0028/FIX-4): the engine capped the build-loop do-while (max_iterations:50)
+# while a brake had NOT fired — state.continue would be true and tasks left open. Called once
+# after the loop, this forces the clean-park below so a plain STOP #2 accept can't ship open
+# work without reconcile. Treated as a budget-style exhaustion for parking purposes.
+if force_park and reason is None and pickable:
+    reason = "iteration_cap_reached"
+
 # Budget/time exhaustion is a CLEAN PARK (ADR-0016): remaining open tasks are parked
 # with a note, so STOP #2's accept path routes through reconcile-contract (gap D guard —
 # plain accept must never ship open work without a spec edit).
-if reason in ("budget_exhausted", "time_box_exceeded"):
+if reason in ("budget_exhausted", "time_box_exceeded", "iteration_cap_reached"):
     for t in pickable:
         if t not in state["parked"]:
             state["parked"].append(t)

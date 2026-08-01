@@ -109,97 +109,82 @@ steps:
             options: [continue, reject]
             on_reject: abort
 
+  # ---------- gap-D guard (ADR-0028/FIX-4) ----------
+  # The engine caps the build-loop do-while at max_iterations:50. If the leash budget exceeds 50
+  # (e.g. many tasks, or escalation inflating per-task cost) the loop can exit by that cap with
+  # state.continue still true and tasks NOT parked — then a plain STOP#2 accept would ship open
+  # work without reconcile (gap D). Path B's v_build already refuses to complete while
+  # continue!=false; Path A had no equivalent. This step forces a final loop-status that
+  # clean-parks any remaining open tasks so the invariant holds in both drivers.
+  - id: build-loop-backstop
+    type: shell
+    output_format: json
+    run: bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh --force-park
+
   # ---------- Review (cycle 0) ----------
   - id: review
     command: speckit.devflow.review
     integration: "{{ inputs.integration }}"
     input: { args: "" }
 
-  # ---------- Loopback cycle 1 (unrolled; workflows have no backward edges) ----------
-  - id: findings-check-1
+  # ---------- Review loopback (ADR-0028: one native `while`, was two unrolled cycles) ----------
+  # The engine has a real `while` step, so the review loopback is one cyclic node capped at
+  # review.cycles — not two hand-duplicated blocks. Design notes:
+  # - The loop condition reads `findings-status` (the pre-loop seed). Step ids are globally unique
+  #   (the validator bans duplicates across all scopes), so the seed cannot also appear in the body;
+  #   the condition therefore re-evaluates against the seed each pass. That is a deliberate, BOUNDED
+  #   over-run: at most review.cycles passes.
+  # - It is harmless because convert-findings and the fix-loop are NO-OPS when findings are clean:
+  #   convert-findings re-reads findings.json fresh and exits without appending fix-tasks; the
+  #   fix-loop then finds no pickable tasks and loop-status returns tasks_exhausted immediately.
+  #   So a stale extra pass does zero work — it re-reviews and exits. The trailing park-findings
+  #   step (after the loop) is what actually parks any true survivors.
+  - id: findings-status
     type: shell
     output_format: json
     run: python3 -c "import json;d=json.load(open('.specify/feature.json'));f=json.load(open(d['feature_directory']+'/review/findings.json'));print(json.dumps({'status':f['status']}))"
-  - id: fix-cycle-1
-    type: if
-    condition: "{{ steps.findings-check-1.output.data.status == 'findings' }}"
-    then:
-      - id: convert-1
+  - id: review-loop
+    type: while
+    max_iterations: 2   # = review.cycles: the real cap on fix cycles (ADR-0012/0028)
+    condition: "{{ steps.findings-status.output.data.status == 'findings' }}"
+    steps:
+      - id: convert
         type: shell
-        run: bash .specify/extensions/devflow/scripts/bash/devflow-convert-findings.sh 1
-      - id: fix-loop-1
+        run: bash .specify/extensions/devflow/scripts/bash/devflow-convert-findings.sh
+      - id: fix-loop
         type: do-while
         max_iterations: 25
-        condition: "{{ steps.loop-status-f1.output.data.continue }}"
+        condition: "{{ steps.loop-status-f.output.data.continue }}"
         steps:
-          - id: iterate-f1
+          - id: iterate-f
             command: speckit.devflow.iterate
             integration: "{{ inputs.integration }}"
             continue_on_error: true
             input: { args: "" }
-          - id: loop-status-f1
+          - id: loop-status-f
             type: shell
             output_format: json
             run: bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh
-          - id: step-pause-f1
+          - id: step-pause-f
             type: if
             condition: "{{ inputs.mode == 'attended-step' }}"
             then:
-              - id: step-gate-f1
+              - id: step-gate-f
                 type: gate
                 message: "attended-step: fix-loop iteration boundary. Continue?"
                 options: [continue, reject]
                 on_reject: abort
-      - id: re-review-1
+      - id: re-review
         command: speckit.devflow.review
         integration: "{{ inputs.integration }}"
-        input: { args: "full re-review, cycle 1" }
-
-  # ---------- Loopback cycle 2 (final; cap = review.cycles) ----------
-  - id: findings-check-2
+        input: { args: "full re-review" }
+  # cap spent (or clean): surviving findings are parked with history (ADR-0012). Runs unconditionally
+  # after the while — the engine gives no "exited by cap" signal, so re-read findings.json every time.
+  - id: park-findings
     type: shell
-    output_format: json
-    run: python3 -c "import json;d=json.load(open('.specify/feature.json'));f=json.load(open(d['feature_directory']+'/review/findings.json'));print(json.dumps({'status':f['status']}))"
-  - id: fix-cycle-2
-    type: if
-    condition: "{{ steps.findings-check-2.output.data.status == 'findings' }}"
-    then:
-      - id: convert-2
-        type: shell
-        run: bash .specify/extensions/devflow/scripts/bash/devflow-convert-findings.sh 2
-      - id: fix-loop-2
-        type: do-while
-        max_iterations: 25
-        condition: "{{ steps.loop-status-f2.output.data.continue }}"
-        steps:
-          - id: iterate-f2
-            command: speckit.devflow.iterate
-            integration: "{{ inputs.integration }}"
-            continue_on_error: true
-            input: { args: "" }
-          - id: loop-status-f2
-            type: shell
-            output_format: json
-            run: bash .specify/extensions/devflow/scripts/bash/devflow-loop-status.sh
-          - id: step-pause-f2
-            type: if
-            condition: "{{ inputs.mode == 'attended-step' }}"
-            then:
-              - id: step-gate-f2
-                type: gate
-                message: "attended-step: fix-loop iteration boundary. Continue?"
-                options: [continue, reject]
-                on_reject: abort
-      - id: re-review-2
-        command: speckit.devflow.review
-        integration: "{{ inputs.integration }}"
-        input: { args: "full re-review, cycle 2 (final)" }
-      # cap spent: surviving findings are parked with history (ADR-0012)
-      - id: park-findings
-        type: shell
-        run: >-
-          python3 -c "import json;d=json.load(open('.specify/feature.json'));p=d['feature_directory']+'/review/findings.json';f=json.load(open(p));
-          f['status']='parked' if f['status']=='findings' else f['status'];json.dump(f,open(p,'w'),indent=2);print(f['status'])"
+    run: >-
+      python3 -c "import json;d=json.load(open('.specify/feature.json'));p=d['feature_directory']+'/review/findings.json';f=json.load(open(p));
+      f['status']='parked' if f['status']=='findings' else f['status'];json.dump(f,open(p,'w'),indent=2);print(f['status'])"
 
   # ---------- Verify (gap-B prerequisite, then the phase) ----------
   - id: verify-prereq

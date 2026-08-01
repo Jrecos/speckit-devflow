@@ -56,16 +56,15 @@ set +e; bash "$FLOW" complete build 2>/dev/null; rc=$?; set -e
 python3 .specify/extensions/devflow/scripts/python/devflow_state.py set specs/012-demo/loop/state.json continue false
 bash "$FLOW" complete build >/dev/null || fail "build should complete once loop exhausted"
 
-# review + fix cycles: fix-cycle-2 is the cap and parks surviving findings itself
+# review + review-loop: ADR-0028 collapsed the two unrolled fix-cycles into ONE review-loop
+# phase that IS the cap and parks surviving findings itself (mirrors workflow.yml's trailing park).
 bash "$FLOW" start review >/dev/null
 echo '{"status":"findings","open":[{"id":"F1","severity":"high","file":"x.ts","summary":"leftover"}],"cycle":0}' > specs/012-demo/review/findings.json
 echo "# findings: F1" > specs/012-demo/review/findings.md
 bash "$FLOW" complete review >/dev/null
-# cycle 1 completes even with findings still open (they flow to cycle 2)
-bash "$FLOW" start fix-cycle-1 >/dev/null && bash "$FLOW" complete fix-cycle-1 >/dev/null || fail "fix-cycle-1 should complete; survivors flow to cycle 2"
-# cycle 2 is the cap: completing it PARKS surviving findings (findings -> parked)
-bash "$FLOW" start fix-cycle-2 >/dev/null && bash "$FLOW" complete fix-cycle-2 >/dev/null || fail "fix-cycle-2 should complete (cap)"
-[ "$(python3 -c 'import json;print(json.load(open("specs/012-demo/review/findings.json"))["status"])')" = "parked" ] || fail "fix-cycle-2 must park surviving findings"
+# review-loop is the cap: completing it PARKS surviving findings (findings -> parked)
+bash "$FLOW" start review-loop >/dev/null && bash "$FLOW" complete review-loop >/dev/null || fail "review-loop should complete (cap)"
+[ "$(python3 -c 'import json;print(json.load(open("specs/012-demo/review/findings.json"))["status"])')" = "parked" ] || fail "review-loop must park surviving findings"
 bash "$FLOW" start verify >/dev/null
 set +e; bash "$FLOW" complete verify 2>/dev/null; rc=$?; set -e
 [ "$rc" -ne 0 ] || fail "verify must not complete without verify-report.md"

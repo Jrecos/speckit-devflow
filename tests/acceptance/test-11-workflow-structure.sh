@@ -32,7 +32,11 @@ def walk(steps_):
         if s.get("default"): yield from walk(s["default"])
 allsteps = list(walk(steps))
 loops = [s for s in allsteps if s.get("type") == "do-while"]
-assert len(loops) == 3, f"expected build + 2 fix loops, got {len(loops)}"
+# ADR-0028: build-loop + ONE fix-loop (inside the single native review-loop while).
+# Was 3 (build + 2 unrolled fix-loops); the review unroll collapsed to a `while`.
+assert len(loops) == 2, f"expected build + 1 fix loop, got {len(loops)}"
+whiles = [s for s in allsteps if s.get("type") == "while"]
+assert len(whiles) == 1 and whiles[0]["id"] == "review-loop", f"expected one review-loop while, got {[w['id'] for w in whiles]}"
 for lp in loops:
     assert isinstance(lp["max_iterations"], int), "max_iterations must be literal int"
     it = next(b for b in lp["steps"] if str(b.get("command", "")).endswith("iterate"))
@@ -62,9 +66,16 @@ cmds = [s for s in allsteps if "command" in s]
 missing = [s["id"] for s in cmds if s.get("integration") != "{{ inputs.integration }}"]
 assert not missing, f"command steps missing integration wiring: {missing}"
 
-# cap-park + accept-with-parked reconcile routing exist (spec §6-9/§6-10 structural halves)
-fix2 = find("fix-cycle-2")
-assert any(x["id"] == "park-findings" for x in fix2["then"]), "park-findings missing from cycle 2"
+# cap-park + accept-with-parked reconcile routing exist (spec §6-9/§6-10 structural halves).
+# ADR-0028: the review loopback is one native `while` (review-loop) capped at review.cycles,
+# with park-findings as a top-level trailing step (was inside the unrolled fix-cycle-2).
+rl = find("review-loop")
+assert rl["type"] == "while", "review-loop must be a native while (ADR-0028)"
+assert isinstance(rl.get("max_iterations"), int) and rl["max_iterations"] >= 1, "review-loop needs an int cap"
+assert any(x["id"] == "park-findings" for x in allsteps), "park-findings (trailing) missing"
+assert not any(s["id"] in ("fix-cycle-1", "fix-cycle-2") for s in allsteps), "unrolled fix-cycles must be gone"
+# gap-D backstop after the build loop (FIX-4): a forced park if the do-while cap exits with continue=true
+assert any(s["id"] == "build-loop-backstop" for s in allsteps), "build-loop-backstop (gap-D) missing"
 accept_case = find("route-stop2")["cases"]["accept"]
 accept_ids = [x["id"] for x in accept_case]
 assert "reconcile-if-parked" in accept_ids and "reconcile-parked" in accept_ids, accept_ids

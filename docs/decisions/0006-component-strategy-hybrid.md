@@ -1,6 +1,8 @@
 # ADR-0006: Component strategy — compose prerequisites, own the core
 
-**Status:** Accepted
+**Status:** Accepted · **partially superseded (v0.4.0) by [ADR-0029](0029-internalize-deps-sole-spec-kit.md)**
+— git.* and superspec are now INTERNALIZED, not composed as prereqs (sole dependency = spec-kit core).
+The "own the core loop" half stands; the "compose git + superspec" half is reversed.
 
 **Context:** The bundle must decide, per capability, whether to *pin* a community extension
 as-is, or *own* a DevFlow component that absorbs its best techniques (HANDOFF Q1). Verified

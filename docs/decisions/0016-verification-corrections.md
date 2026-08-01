@@ -1,6 +1,9 @@
 # ADR-0016: Design corrections from the pre-implementation verification pass
 
-**Status:** Accepted
+**Status:** Accepted · **crit #4 superseded (v0.4.0) by [ADR-0028](0028-review-loop-native-while.md)**
+— the "workflows have no backward edges, so unroll the review loopback" correction was wrong: the
+engine has a native `while`. The review loopback is now one `while`, not two unrolled cycles. All
+other corrections in this ADR stand.
 
 **Context:** Before authoring, a three-agent cross-check verified the design against (1) the
 installed spec-kit 0.12.11 source, (2) current Claude Code hooks/subagent/headless docs, and

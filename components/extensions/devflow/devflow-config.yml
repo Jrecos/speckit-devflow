@@ -2,7 +2,11 @@
 # Onboard (/speckit-devflow-onboard) detects and fills the commands section; hooks are inert until it does.
 loop:
   iteration_factor: 2.5        # budget = ceil(open_tasks * factor); shown at STOP #1
-  max_attempts_per_task: 2     # attempts before a task is parked
+  max_attempts_per_task: 6     # attempts before a task is parked. 6 fits the maker escalation
+                               # ladder (ADR-0026): tier 0 self-corrects 3x, then one attempt per
+                               # remaining tier, so the strongest maker (last tier) always acts
+                               # BEFORE the park. Without a local maker the tail tiers are unused
+                               # and this behaves like the old cap for practical purposes.
   time_box_hours: 4
 review:
   cycles: 2                    # unroll depth of the workflow's review loopback (informational)
@@ -20,3 +24,13 @@ judge:
 checker:
   role: independent-checker
   independent: true
+maker:
+  role: local-maker            # resolved by $DEVFLOW_MAKER_CMD in your environment (never committed).
+  required: false              # Claude-sufficient (ADR-0020): when DEVFLOW_MAKER_CMD is unset the
+                               # caller (Claude) types the code itself — exact status quo, no warning.
+  edit_format: whole-file      # ADR-0003: a weaker local maker demands whole-file writes, not diffs.
+  escalation:
+    order: [local, assistant, agentic, claude]   # tier ladder; the last tier "claude" = the caller
+                               # types it (the maker is not invoked). The environment resolves what
+                               # each role name means. Tier is derived from state.attempts (ADR-0026):
+                               # attempts 0-2 -> tier 0 (3 self-corrections), 3 -> 1, 4 -> 2, >=5 -> 3.

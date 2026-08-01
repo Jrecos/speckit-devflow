@@ -41,8 +41,9 @@ import json;s=json.load(open("specs/012-demo/loop/state.json"))
 assert s["attempts"].get("T1")==1, s["attempts"]
 assert "T1" in s["failure_notes"], s["failure_notes"]' || fail "backstop must count attempt + note"
 
-# Parking — attempts at cap → task parked, continue still true (other tasks open)
-write_state "$S" budget='{"used":2,"total":9}' attempts='{"T1":2}'
+# Parking — attempts at cap → task parked, continue still true (other tasks open).
+# Cap raised 2->6 for the maker escalation ladder (ADR-0026): the strongest tier must act before park.
+write_state "$S" budget='{"used":6,"total":20}' attempts='{"T1":6}'
 out=$(run_ls)
 python3 -c '
 import json;s=json.load(open("specs/012-demo/loop/state.json"))

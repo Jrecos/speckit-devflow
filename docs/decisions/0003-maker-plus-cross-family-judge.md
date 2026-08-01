@@ -5,6 +5,12 @@ maker locality is **deferred** in v0.x — ADR-0009 pins Claude as the maker; th
 independence seam stands. Judge FAIL semantics scoped: iteration-level FAIL hard-blocks;
 Verify-level FAIL parks to STOP #2 with reject as the recommended default.)
 
+> **Update (v0.3.0):** maker locality is **no longer deferred.** [ADR-0025](0025-local-maker-seam.md)
+> builds the maker env seam (additive; unset = Claude, exact status quo), [ADR-0026](0026-model-escalation.md)
+> adds attempts-derived model escalation, and [ADR-0027](0027-judge-cross-family-local.md) makes the
+> cross-family judge real in practice. The whole-file-edit-format and stronger-harness caveats this ADR
+> flagged are honored in ADR-0025 (whole-file payload + mechanical anti-regression in layer 2).
+
 **Context:** The first run used one cloud model as both maker and checker — same-family
 self-review, no cost separation, no independence. The literature says same-model self-checking
 is the documented weak verification layer, and role-split (not peer-swarm) is the multi-model

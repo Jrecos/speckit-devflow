@@ -71,6 +71,7 @@ grep -q 'CONFLICT: test'                         "$ITERATE" || fail "ADR-0024: i
 grep -q 'authority order (ADR-0024)'             "$JUDGE_SH" || fail "ADR-0024: judge fallback prompt dropped the authority-order clause"
 grep -q 'CHANGES or DELETES a test'              "$JUDGE_SH" || fail "ADR-0024: judge fallback prompt no longer scopes the spec-beats-tests rule to in-diff test changes (finding-6 guard)"
 grep -q 'changed or deleted test'                "$CHECKER"  || fail "ADR-0024: checker dropped the changed-test-is-suspect rule"
+grep -qE '^model:[[:space:]]*opus'               "$CHECKER"  || fail "ADR-0031: checker must be pinned to model: opus (strongest per-task grader)"
 grep -q 'authority order (ADR-0024)'             "$VERIFY"   || fail "ADR-0024: verify.md dropped the spec-beats-tests exception in verdict reading"
 
 # --- finding 9: worktree discipline — the checkout carrying DevFlow never switches away ---

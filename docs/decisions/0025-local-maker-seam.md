@@ -51,3 +51,14 @@ the heavy typing; Claude keeps the guarantees.
   the case for a genuinely cross-family judge.
 - Homelab wiring (Pi → LiteLLM → local models, golden rule) lives outside this repo; the bundle only
   ever sees the generic env var.
+
+**Evidence (the "runs, not features" debt).** Running an eval that drives a **local reasoning model as
+the top-level `/iterate` agent** — the whole prose command: prime, open iteration, pick task,
+implement, scoped tests, invoke checker, invoke judge, GREEN close + record-decision — failed to reach
+a GREEN close (0/1). That is the empirical case FOR this ADR's design, not against it: a weak local
+model cannot reliably drive DevFlow's prose-heavy protocol end-to-end, which is exactly why the maker
+is a **tool inside a `claude -p /iterate` session** (Claude owns the protocol and the layer-2
+guarantees; the local model only produces the file for the Implement step). In that role the same
+model succeeds: a live maker call correctly implemented a task and preserved unrelated code, with the
+seam catching the schema deviation and validating anti-regression. Local-as-harness is out of scope;
+local-as-maker-tool is what shipped.

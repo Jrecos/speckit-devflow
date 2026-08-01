@@ -83,7 +83,7 @@ trap on_exit EXIT
 echo "== release: bumping version literals to $VERSION =="
 # Context-keyed, not a blind replace: each substitution is anchored to the line
 # shape (indent/quoting) or the preceding "- id: <x>" line, so bundle.yml's
-# pinned git (1.0.0) / superspec (1.0.1) provides entries are never touched.
+# ADR-0029: no external extension pins remain (git/superspec internalized); only devflow is provided.
 # All substitutions are computed in memory first; nothing is written unless
 # every expected hit-count matched (atomic — no partial bump on a mismatch).
 python3 - "$VERSION" <<'PY'
@@ -160,10 +160,9 @@ checks = [
 offenders = [f"{path}: missing literal for version {new}"
              for path, pattern in checks if not re.search(pattern, pathlib.Path(path).read_text())]
 
-bundle_text = pathlib.Path("bundle/bundle.yml").read_text()
-for pinned_id, pinned_version in [("git", "1.0.0"), ("superspec", "1.0.1")]:
-    if not re.search(rf'- id: {pinned_id}\n      version: "{re.escape(pinned_version)}"', bundle_text):
-        offenders.append(f"bundle/bundle.yml: pinned {pinned_id}@{pinned_version} was disturbed")
+# ADR-0029: git + superspec are no longer bundle-provided extensions (behaviors internalized),
+# so there are no external pins left to guard. The only provided extension is devflow itself,
+# which the version-literal checks above already cover.
 
 if offenders:
     print("release: grep-guard FAILED — version literals out of lockstep:", file=sys.stderr)

@@ -18,7 +18,8 @@ description: "Validates and installs every DevFlow prerequisite at project scope
 - [ ] 2. semgrep MCP  - [ ] 7. CLAUDE.md protocol
 - [ ] 3. commands     - [ ] 8. dispatch sanity
 - [ ] 4. judge seam   - [ ] 9. script permissions
-- [ ] 4b. maker seam  - [ ] 10. gitignore
+- [ ] 4b. maker seam  - [ ] 4c. test-audit
+- [ ] 5. hooks pack   - [ ] 10. gitignore
 - [ ] 5. hooks pack
 ```
 
@@ -69,6 +70,12 @@ description: "Validates and installs every DevFlow prerequisite at project scope
      returns exit 3 for the unset case. Checklist: `maker ✓ (Claude-sufficient)`.
    - Only if set-but-broken (crashes, or never returns valid files nor a clean exit 1):
      `maker ✗` — fix or unset it before running the loop.
+4c. **Test-audit seam** (ADR-0032, optional): is `DEVFLOW_TESTAUDIT_CMD` set?
+   - **Set** → a cross-family model will review the acceptance tests vs the spec in the Plan phase.
+     Report the family. Checklist: `test-audit ✓ (cross-family: <family>)`.
+   - **Unset** → the audit is skipped (Claude-sufficient); the tests are still written and run, just
+     not cross-checked. Checklist: `test-audit ⚠ skipped (set DEVFLOW_TESTAUDIT_CMD to enable)`.
+   Note: mutation testing (Layer B) is internal and always available at Verify — no env var needed.
 5. **Hooks pack**: run exactly
    `python3 .specify/extensions/devflow/scripts/python/merge_settings.py .claude/settings.json .specify/extensions/devflow/assets/claude/settings-hooks.json`
    (idempotent merge; prints `merged` or `already-present`).

@@ -28,6 +28,9 @@ bash "$FLOW" start plan >/dev/null
 echo "# plan" > specs/012-demo/plan.md
 bash "$FLOW" complete plan >/dev/null || fail "plan should complete (plan.md + AC tasks)"
 
+# test-audit (ADR-0032) sits between plan and leash and is skippable (advisory cross-family review)
+bash "$FLOW" complete test-audit --skip >/dev/null || fail "test-audit should be skippable"
+
 # leash requires state + leash.md
 bash "$FLOW" start leash >/dev/null
 set +e; bash "$FLOW" complete leash 2>/dev/null; rc=$?; set -e

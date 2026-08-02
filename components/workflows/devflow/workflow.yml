@@ -57,6 +57,10 @@ steps:
     command: speckit.devflow.checklist   # ADR-0029: plan-validation artifact shown at STOP #1
     integration: "{{ inputs.integration }}"
     input: { args: "" }
+  - id: test-audit
+    command: speckit.devflow.test-audit  # ADR-0032: cross-family review of the tests vs spec (warns @ STOP#1)
+    integration: "{{ inputs.integration }}"
+    input: { args: "" }
   - id: agent-context
     type: shell
     run: bash .specify/extensions/devflow/scripts/bash/devflow-agent-context.sh
@@ -256,6 +260,14 @@ steps:
     command: speckit.devflow.verify
     integration: "{{ inputs.integration }}"
     input: { args: "" }
+  # ADR-0032 Layer B: mutation-test the feature source — mechanically prove the tests catch broken
+  # code. Survivors (mutations tests didn't notice) = weak coverage, written to mutation-report.json
+  # and surfaced at STOP #2. Advisory, never blocks (the script always exits 0). Target/globs and the
+  # test command are read from config; here we scan the whole src tree with a bounded mutant budget.
+  - id: mutation-test
+    type: shell
+    output_format: json
+    run: bash .specify/extensions/devflow/scripts/bash/devflow-mutate.sh 'src/*.js' 2>/dev/null || echo '{"score":null}'
 
   # ---------- STOP #2 + routing ----------
   - id: stop2-prep

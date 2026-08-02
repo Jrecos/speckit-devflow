@@ -26,11 +26,11 @@ import json, os, re, subprocess, sys, datetime
 cmd, flow_p, fdir = sys.argv[1], sys.argv[2], sys.argv[3]
 args = sys.argv[4:]
 
-PHASES = ["frame", "plan", "leash", "analyze", "stop1", "build",
+PHASES = ["frame", "plan", "test-audit", "leash", "analyze", "stop1", "build",
           "review", "review-loop", "verify", "stop2",
           "reconcile", "ship", "capture"]
 # phases that may be skipped when their entry condition doesn't hold
-SKIPPABLE = {"review-loop", "reconcile"}
+SKIPPABLE = {"test-audit", "review-loop", "reconcile"}
 STOPS = {"stop1": ["approve", "revise", "reject"],
          "stop2": ["accept", "accept-with-deviation", "reject"]}
 
@@ -74,6 +74,9 @@ def v_build():
 def v_review():
     if not exists("review/findings.json"): return "review needs review/findings.json"
     if not exists("review/findings.md"): return "review needs review/findings.md"
+def v_test_audit():
+    # ADR-0032: advisory cross-family test review; ordering-only (skippable).
+    return None
 def v_review_loop():
     # ADR-0028: the single review-loop phase (was fix-cycle-1/2). It IS the cap: after the loop
     # (bounded by review.cycles) any survivors are PARKED here, mirroring workflow.yml's trailing
@@ -104,7 +107,7 @@ def v_capture():
 
 VERIFIERS = {"frame": v_frame, "plan": v_plan, "leash": v_leash, "analyze": v_analyze,
              "build": v_build, "review": v_review,
-             "review-loop": v_review_loop,
+             "test-audit": v_test_audit, "review-loop": v_review_loop,
              "verify": v_verify, "reconcile": v_reconcile, "ship": v_ship,
              "capture": v_capture}
 

@@ -30,6 +30,14 @@ checker:
                                # maker introduces that thin unit tests miss. The pin lives in the
                                # subagent frontmatter (assets/claude/agents/devflow-checker.md);
                                # this key documents intent. Amends ADR-0022's model:inherit choice.
+test_validation:                # ADR-0032: two layers that answer "are these real tests?"
+  audit:                        # Layer A (Plan phase): a DIFFERENT family reviews the test author's
+    role: cross-family-test-auditor   # tests vs the spec. Resolved by $DEVFLOW_TESTAUDIT_CMD; unset
+    enabled: true               # → the audit is skipped (Claude-sufficient). Warns at STOP #1.
+  mutation:                     # Layer B (Verify phase): mechanically mutate src + re-run tests;
+    enabled: true               # survivors = weak tests. Internal (devflow-mutate.sh), no external dep.
+    max_mutants: 40             # cap per run (bounded cost)
+    min_score: 0.5              # advisory floor; below it, warn at STOP #2 (never blocks)
 maker:
   role: local-maker            # resolved by $DEVFLOW_MAKER_CMD in your environment (never committed).
   required: false              # Claude-sufficient (ADR-0020): when DEVFLOW_MAKER_CMD is unset the

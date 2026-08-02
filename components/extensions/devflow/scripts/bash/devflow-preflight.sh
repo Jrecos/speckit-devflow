@@ -16,7 +16,7 @@ cd "${CLAUDE_PROJECT_DIR:-.}"
 
 # The command stems every install renders (dot-form docs → dashed slugs). Kept in
 # lockstep with components/extensions/devflow/commands/ — test-21 cross-checks the list.
-STEMS="brainstorm capture checklist iterate onboard reconcile-contract record-decision review start status verify"
+STEMS="brainstorm capture checklist iterate test-audit onboard reconcile-contract record-decision review start status verify"
 
 missing=()
 
